@@ -1,0 +1,127 @@
+==== Overview
+
+The Red Hat Enterprise Linux rsyslog Atomic Container Image is a Docker formatted image that is designed to run on a Red Hat Enterprise Linux Atomic (RHEL Atomic) host.
+
+With this container, you can start an rsyslogd daemon that:
+
+* Uses configuration files and log files that are stored on the Atomic host's file system
+* Can be configured to provide any standard rsyslog features, including directing log message to a remote log host
+
+This topic describes how to get and run the RHEL rsyslog container.
+
+Because the rsyslog service is not installed on a Red Hat Enterprise Linux Atomic Host, the rsyslog container offers a way of adding that service to an Atomic host.
+
+Here are some of the features of the rsyslog container:
+
+* *Installs from atomic command*: When you use the *atomic install* command to get and run the rsyslog container, several things happen. The container itself is pulled from the registry, files and directories needed by the rsyslog service are added to the host, and the container is started with *docker run*.
+
+* *Configure from the host*: Because the files needed by the rsyslog service are stored on the Atomic host, there is no need to go inside the container itself. All configuration can be done from the host.
+
+* *Restarting the service*: If you make any changes to the configuration, to pick up the changes you just have to stop, remove and restart the container again (*docker stop rsyslog; docker rm rsyslog; atomic run rhel7/rsyslog*).
+
+* *Super privileged container*: Keep in mind that running the rsyslog container opens privileges from that container to the host system. The container has root access to RHEL Atomic host and opens access to privileged configuration and log files.
+
+==== Getting and Running the RHEL rsyslog Container
+
+To use the rsyslog Atomic Container Image on a RHEL Atomic host, you need to install it, load it and run it, as described in the following procedure:
+
+. *Install RHEL Atomic Host*:  To install and configure a RHEL Atomic host, refer to the appropriate installation guide listed on the https://access.redhat.com/articles/rhel-atomic-documentation[Red Hat Enterprise Linux Atomic Host Documentation] page.
+
+. *Install the RHEL rsyslog Container*: While logged into the RHEL Atomic host, get and start the RHEL rsyslog Container by running the following command:
++
+....
+# docker pull rhel7/rsyslog
+# atomic install rhel7/rsyslog
+...
+docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=rhel7/rsyslog -e NAME=rsyslog rhel7/rsyslog /bin/install.sh
+Creating directory at /host//etc/pki/rsyslog
+Installing file at /host//etc/rsyslog.conf
+Installing file at /host//etc/sysconfig/rsyslog
+....
+
+. *Start the rsyslog container*: To run the RHEL rsyslog container, use the atomic command. The following command starts the container using the docker command with appropriate options:
++
+....
+# atomic run rhel7/rsyslog
+docker run -d --privileged --name rsyslog --net=host -v /etc/pki/rsyslog:/etc/pki/rsyslog -v /etc/rsyslog.conf:/etc/rsyslog.conf -v /etc/rsyslog.d:/etc/rsyslog.d -v /var/log:/var/log -v /var/lib/rsyslog:/var/lib/rsyslog -v /run/log:/run/log -v /etc/machine-id:/etc/machine-id -v /etc/localtime:/etc/localtime -e IMAGE=rhel7/rsyslog -e NAME=rsyslog --restart=always rhel7/rsyslog /bin/rsyslog.sh
+5803dbade82274158f0694a19fdcd7aac044a2656b2ce96d1aebdb0e30ad5ffd
+....
++
+After the atomic command starts, you can see the exact 'docker' command that is run to start the rsyslog container. The rsyslogd container runs as a super privileged container.
+
+. *Check that the container is running*: Type the following to check that the rsyslog container is running:
++
+....
+# docker ps
+CONTAINER ID IMAGE                                                COMMAND             CREATED       STATUS        PORTS NAMES
+5803dbade822 registry.access.stage.redhat.com/rhel7/rsyslog:7.1-3 "/bin/rsyslog.sh"   9 minutes ago Up 9 minutes        rsyslog
+....
++
+NOTE: The full name of the image is "registry.access.redhat.com/rhel7/rsyslog:7.1-3", which include both the name of the registry from which it was downloaded and the version of the image obtained. The actual container that is run locally, however, is simply called rsyslog. The difference between the image and container is central to the way docker works.
+
+. *Check that the rsyslog service is working*: From a shell, type the following to watch as messages come into the */var/log/messages* file:
++
+....
+# tail -f /var/log/messages
+....
+
+. *Generate a log message*: Type the following to generate a log message:
++
+....
+# logger "Test that rsyslog is doing great"
+....
++
+If the rsyslog service is working, the message should appear from the shell running the tail command. You can start using the rsyslog service on the Atomic host now.
+
+==== Tips for Running rsyslog Container
+
+Here are some tips to help you understand a few other issues related to running the RHEL rsyslog container:
+
+* *Understanding persistent logging*: By default, the Red Hat Enterprise Linux Atomic Host system is configured to log to persistent logs on the local root filesystem with journald by setting the following value in in */etc/systemd/journald.conf*:
++
+....
+Storage=persistent
+....
++
+To configure persistent logging to either local rsyslog logs or to a remote rsyslog server, you may want to disable the local journald persistent logging by changing that line to:
++
+....
+Storage=volatile
+....
++
+and rebooting the RHEL Atomic Host system. journald will still maintain local logs in a ramdisk if you do this, but will not write them to disk. This can save on local disk IO if the data is already being captured securely in another location. The rsyslog container will still be able to capture and process journald logs.
+
+* *Changing rsyslog configuration*: Every time you change the rsyslog container configuration, you must stop and remove the running rsyslog container, then start a new one. To do that, run the following commands:
++
+....
+# docker stop rsyslog
+# docker rm rsyslog
+# atomic run rhel7/rsyslog
+....
+
+* *Log rotation*: In the initial version of the rsyslog container image, there is no support for local rotation of rsyslog log files. This will be added in a future update. But rsyslog can still be used with local log files if space permits.
++
+There is no requirement for local log rotation if rsyslog is configured to send logs only to a remote log collection host. Refer to the https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/System_Administrators_Guide/s1-basic_configuration_of_rsyslog.html[Red Hat Enterprise Linux System Administrator's Guide] for information on configuring both local and remote logging with rsyslog.
+
+* *Ensure there is enough space for logs*.
++
+** The ideal configuration for many cloud environments is to configure rsyslog to log to a remote rsyslog server.
+** If you are logging to local storage, be aware that log rotation within a container currently does not occur. In upcoming releases, we will support the configuring log file size limits for the rsyslog configuration by editing logrotate configuration file (such as those in */etc/logrotate.d/* directory and the */etc/logrotate.conf* file). This feature is not yet supported.
+** Note especially that the amount of space available on the root file system of Atomic host qcow2 images is limited. A larger space can be provisioned by installing via the Red Hat Enterprise Linux Atomic host anaconda installer ISO image.
+
+* *Image and Container Lifecycle*
++
+If you want to upgrade to a newer version of the Red Hat Enterprise Linux rsyslog Atomic container image, it is not enough to merely download the new image with *docker pull rhel7/rsyslog*. You must also explicitly remove the existing rsyslog container with the following commands, before re-running it, in order to create a fresh container from the new image:
++
+....
+# docker pull rhel7/rsyslog
+....
++
+If a new image downloads, run the following:
++
+....
+# docker stop rsyslog
+# docker rm rsyslog
+# atomic install rhel7/rsyslog
+# atomic run rhel7/rsyslog
+....

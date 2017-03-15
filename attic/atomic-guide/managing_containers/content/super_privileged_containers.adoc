@@ -1,0 +1,89 @@
+=== Overview
+
+Containers are designed to keep their own, contained views of namespaces and have limited access to the hosts they run on. By default, containers have a process table, network interfaces, file systems, and IPC facilities that are separate from the host. Many security features like capabilities and SELinux are wrapped around containers to control access to the host system and other containers. Although containers can use resources from the host, commands run from a container have a very limited ability to interface directly with the host.
+
+Some containers, however, are intended to access, monitor, and possibly change features on the host system directly. These are referred to as _super privileged containers_. Because of the nature of Red Hat Enterprise Linux Atomic hosts (RHEL Atomic), SPCs offer some important uses for RHEL Atomic hosts. For example:
+
+* The RHEL Atomic Host is meant to be lean. Many tools that you might want to use to manage or troubleshoot RHEL Atomic host are not included by default.
+* Because Atomic Host does not allow for packages to be installed using *yum* or *rpm* commands, the best way to add tools from RHEL or third parties on to a RHEL Atomic Host is to include those tools in a container.
+* You can bring an SPC into a RHEL Atomic Host, troubleshoot a problem, then remove it when it is no longer needed, to free up resources.
+
+Red Hat produces several SPCs that are tailored specifically to run on RHEL Atomic hosts, and more are in the pipeline for later. These include:
+
+* *RHEL Atomic Tools Container Image*: This container can be thought of as the administrator's shell. Many of the debugging tools (such as strace, traceroute, and sosreport) and man pages that an administrator might use to diagnose problems on the host are in this container.
+* *RHEL Atomic rsyslog Container Image*: This container runs the rsyslogd service, allowing you to offload log messages to a centralized server or to manage log files in RHEL Atomic. Note that the systemd-journald service is collecting all logging data on the RHEL Atomic Host, even if you do not install the rsyslog container.
+* *RHEL Atomic System Activity Data Collector (sadc) Container Image*: This container runs the sadc service from the sysstat package and causes the RHEL Atomic system to gather data continuously that can be read later by the *sar* command.
+* *RHEL Atomic System Security Services Daemon (SSSD) Container Image*: This container allows the Red Hat Enterprise Linux Atomic Host authentication subsystem to be connected to central identity providers like Red Hat Identity Management and Microsoft Active Directory.
+
+Using the RHEL Atomic Tools Container Image as an example, this topic illustrates how super privileged containers are run and how host features are accessed from an SPC.
+
+=== Running Privileged Containers
+
+Running a *docker* command to include every option you need to run as a super privileged container would require a long and complicated command line. For that reason, we have made it simpler by introducing the *atomic* command to run containers. If you run an *atomic* command like the following:
+
+....
+# atomic run rhel7/rhel-tools
+[root@localhost /]#
+....
+
+It creates and starts up the rhel-tools container using the docker command with multiple options. This makes it simpler to use and execute containers in the RHEL Atomic Host. The resulting docker command is as follows:
+
+....
+docker run -it --name rhel-tools --privileged                       \
+      --ipc=host --net=host --pid=host -e HOST=/host                \
+      -e NAME=rhel-tools -e IMAGE=rhel7/rhel-tools                  \
+      -v /run:/run -v /var/log:/var/log                             \
+      -v /etc/localtime:/etc/localtime -v /:/host rhel7/rhel-tools
+....
+
+By understanding what options are run for a super privileged container you can better understand how you might want to use those options when running your own containers that need to access resources on the host. Here are descriptions of those options:
+
+* *-i -t*: Open a terminal device (*-t*) and run interactively (*-i*).
+
+* The *--name* option sets the name of the container (rhel-tools, in this case).
+
+* The *--privileged* option turns off the Security separation, meaning a process running as root inside of the container has the same access to the RHEL Atomic host that it would have if it were run outside the container.
+
+* The *--ipc=host*, *--net=host*, and *--pid=host* flags turn off the ipc, net, and pid namespaces inside the container. This means that the processes within the container see the same network and process table, as well as share any IPCs with the host processes.
+
+There several options to set environment variables inside the container (*-e*). You can refer to any of these options from the shell that opens when you start the container (for example, *echo $HOST*). These include:
+
+* *-e HOST=/host*: Sets the location of the host filesystem within the container (in other words, where / from the host is mounted). You can append $HOST to any file name so a command you run accesses that file on the host instead of within the container. For example, from within the container, *$HOST/etc/passwd* accesses the */etc/passwd* file on the host.
+
+* *-e NAME=rhel-tools*: Sets the name of the container (what you see when you type *docker ps*).
+
+* *-e IMAGE=rhel7/rhel-tools*: Identifies the name of the image (what you see when you type *docker images*).
+
+Several files and directories from the host (in addition to what is normally mounted from the host to a container) are mounted from the host file system to the container. These include:
+
+* *-v /run:/run*: The *-v /run:/run* option mounts the */run* directory from the host on the */run* directory inside the container. This allows processes within the container to talk to the host's dbus service and talk directly to the systemd service. Processes within the container can even communicate with the docker daemon.
+
+* *-v /var/log:/var/log*: Allows commands run within the container to read and write log files from the host's */var/log* directory.
+
+* *-v /etc/localtime:/etc/localtime*: Causes the host system's timezone to be used with the container.
+
+* *-v /:/host*: Mounting */* from the host on */host* allows a process within the container to easily modify content on the host. Running *touch /host/etc/passwd* would actually act on the */etc/passwd* file on the host.
+
+The last argument identifies *rhel7/rhel-tools* as the image to run.
+
+In the case of the RHEL Tools privileged container, when you run it, a shell opens and you can start using the commands from inside that container. As an alternative, you could add an option to the end of the *atomic* or *docker* command line to run a particular command (such as *sosreport* or *traceroute*). The next section describes how to begin investigating that container.
+
+==== Understanding Name Spaces in Privileged Containers
+
+Many of the basic Red Hat Enterprise administrative commands have been modified to be aware they are running in a container. For example, when you run *sosreport* inside the RHEL Atomic Tools Container, it knows to use */host* as the root of the file system and not */*. When you run other commands from within the RHEL Atomic Tools Container (or any privileged container), however, it might help to understand how they may behave differently when run in a privileged container, based on the following topics:
+
+* *Privileges*
+
+A privileged container runs applications as root user on the host by default. The container has this ability because it runs with an `unconfined_t` SELinux security context.
+
+* *Mount Tables*
+
+When you use tools such as *df* and *mount* to see what file systems are mounted, you see different information from inside the privileged container then you would see if you ran the same command directly on the host. That's because the two environments maintain their own mount table.
+
+* *Process Tables*
+
+Unlike a regular container, that only sees the processes running inside the container, running a *ps -e* command within a privileged container (with *--pid=host* set) lets you see every process running on the host. So, you can pass a process ID from the host to commands that run in the privileged container (for example, *kill PID*). With some commands, however, permissions issues could occur when they try to access processes from the container.
+
+* *Inter-process communications*
+
+The IPC facility on the host is accessible from within the privileged container. So, you can run commands such as *ipcs* to see information about active message queues, shared memory segments, and `semaphone` sets on the host.

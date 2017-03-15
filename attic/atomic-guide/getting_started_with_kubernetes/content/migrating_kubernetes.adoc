@@ -1,0 +1,59 @@
+If you already have a Kubernetes all-in-one system up and running from an earlier release of RHEL or RHEL Atomic, you can migrate your setup to the latest release using the procedure described here. If you have a Kubernetes cluster installed from an earlier RHEL release, that configuration is no longer supported.
+
+The main issue in migrating from an earlier RHEL Atomic Host release is that three Kubernetes services on the master (kube-scheduler, kube-apiserver, and kube-controller-manager) were dropped from the RHEL Atomic Host distribution. So, to upgrade to a new release, you need to transition to containerized versions of those services on your Kubernetes master.
+
+Here's how you can go about upgrading your Kubernetes all-in-one master and node to a later release of RHEL or RHEL Atomic:
+
+. *Stop Kubernetes services*: Run these commands from the master to stop and disable Kubernetes services:
+
++
+....
+# for SERVICES in kube-apiserver kube-controller-manager kube-scheduler; do
+    systemctl stop $SERVICES
+    systemctl disable $SERVICES
+    systemctl is-active $SERVICES
+    done
+# systemctl stop kubelet
+....
+
+. *Upgrade each system*: Upgrading is done differently on RHEL Server and RHEL Atomic systems:
+
++
+On a RHEL Atomic Host, system type the following:
+
++
+....
+# atomic host upgrade
+# reboot
+....
+
++
+On a RHEL Server system, type the following:
+
++
+....
+# yum upgrade -y
+....
+
+. *Create manifest files (optional)*: You can create files named apiserver.pod.json, controller-manager.pod.json, and scheduler.pod.json files with content described earlier in this document. You may need to modify those files based on setting in your current apiserver, controller-manager, and scheduler configuration files (in */etc/kubernetes*). Copy the new json files to the */etc/kubernetes/manifests/* directory. If those files don't exist, however, your Kubernetes master services will use the configuration files from your previous release that are contained in the */etc/kubernetes* directory.
+
+. *Reconfigure kubelet*: To have kubelet use the new manifest files, add a KUBELET_ARGS argument to the */etc/kubernetes/kubelet* file that points to that directory, as described earlier (*--config=/etc/kubernetes/manifests/*). 
+
+. *Pull Kubernetes containers*: On the master, before you try to start the containerized Kubernetes services, you should pull their docker images to the local system. Run the following commands to do that:
+
++
+....
+# docker pull rhel7/kubernetes-controller-mgr
+# docker pull rhel7/kubernetes-apiserver
+# docker pull rhel7/kubernetes-scheduler
+....
+
+. *Restart etcd and kubelet*: Restarting etcd and kubelet services results in the new manifest files being used to start up the containerized versions of kube-apiserver, kube-controller-manager, and kube-scheduler.
+
++
+....
+# systemctl restart etcd kubelet
+....
+
+At this point, the three Kubernetes containers should have replaced the systemd versions of those services on your system. 
+

@@ -1,0 +1,14 @@
+= Atomic Host Content
+
+This is the Git repo for all guides related to RHEL Atomic Host.
+
+Books are organized into folders. Each book's folder contains:
+
+- *_content/_* -- for content (`.adoc` files)
+- *_files/_* -- for downloadable files
+- *_images/_* -- for images
+- *_docinfo.xml_* -- standard Docbook definitions
+- *_master.adoc_* -- table of contents
+
+For more information about the workflow, see
+link:https://mojo.redhat.com/docs/DOC-1046829[this mojo page].

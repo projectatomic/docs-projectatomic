@@ -1,0 +1,5 @@
+= REPLACE WITH BOOK NAME
+:imagesdir: images
+
+== REPLACE WITH TOPIC NAME
+include::content/REPLACE_WITH_TOPIC_FILENAME.adoc[leveloffset=+1]

@@ -1,0 +1,794 @@
+=== Overview
+Using Kubernetes, you can run and manage docker-formatted containers from one system (a Kubernetes master) and deploy them to run on other systems (Kubernetes nodes). Kubernetes itself consists of a set of system services that allow you to launch and manage Docker containers in what are referred to as *pods*. Those pods can run across multiple nodes and be interconnected by Kubernetes *services*. By defining *replication controllers*, pods can quickly scale up or down to meet demand.
+
+Some Kubernetes services are now delivered in containers. Configuring Kubernetes itself now requires starting up the *docker* and *kubelet* services, then loading Kubernetes configuration information using manifest files. This is different from earlier versions of Kubernetes in RHEL, where you would configure Kubernetes from files in the */etc/kubernetes* directory and start and stop services using the systemctl command.
+
+The two major procedures in this chapter describe how to:
+
+* *Creating a Kubernetes Cluster*: This section has you create a three-system Kubernetes cluster from scratch and run two containers on it.
+* *Migrating from an earlier version of Kubernetes*: This describes how to upgrade from an earlier Atomic or RHEL Server release of Kubernetes. Transitioning of some Kubernetes system services to use containerized versions of those services is required.
+
+=== Creating a Kubernetes Cluster 
+Setting up a three-node Kubernetes cluster consists of the following general steps:
+
+* Set up three RHEL Atomic Host or Red Hat Enterprise Linux 7 Server systems to use as a Kubernetes master and two Kubernetes nodes (previously called minions).
+* Configure and turn on docker, flannel, and kubelet services on the master
+* Create manifest files for Kubernetes services, each of which identifies a container image for a Kubernetes service and configuration settings
+* Feed those manifest files to the kubelet service so that containerized versions of the Kubernetes services start at boot time
+
+To use the Kubernetes cluster once it is up and running, you can create data files (in YAML format) that define services, pods and replication controllers. This procedure assumes you are running either of the following systems:
+
+* *RHEL 7.2 Atomic Host*: If you are not at the latest RHEL 7.2, run *atomic host upgrade* and reboot your RHEL Atomic host.
+
+* *RHEL 7.2 Server*: Your RHEL servers must include at least these versions :
+
+** kubernetes-1.2
+** etcd-2.2.5
+** docker-1.10
+** flannel-0.5.3
+
+If you are not already on these (or later) versions, you should upgrade your system as described in the next section.
+
+=== Preparing to Deploy Containers with Kubernetes
+
+To get started, you need to obtain the latest RHEL Atomic Host or RHEL 7 Server installation media and install one of those operating systems on each of the three nodes, as described below.
+
+. *Get Installation Media*: Get RHEL Atomic Host or RHEL Server media as follows:
+
+* RHEL Atomic Host 7.2 media: Get the RHEL Atomic Host 7.2 media you choose by going to the https://access.redhat.com/downloads/content/69/[Red Hat Enterprise Linux Downloads] and selecting from available media.
+* RHEL 7.2 Server media: Get the Red Hat Enterprise Linux 7.2 Server media you choose by going to the https://access.redhat.com/downloads/content/69/[Red Hat Enterprise Linux Downloads] and selecting from available media.
+
+. *Install RHEL or RHEL Atomic Host systems*: This procedure requires three or more RHEL Atomic host systems be installed. During installation, be sure to:
+
+  * Set network interfaces so they can communicate with the other systems in the Kubernetes cluster.
+  * Have enough disk space to handle the size and number of containers you want to use.
+  * Reboot the system when installation is complete and do some further configuration.
+
+. *Configure Network Time Protocol*: All systems in the cluster (master and nodes) need to have their time synced together.  Refer to the RHEL 7 System Administrator's Guide for instruction on setting up link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html-single/System_Administrators_Guide/index.html#ch-Configuring_NTP_Using_ntpd[Network Time Protocol daemon (ntpd)] or link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html-single/System_Administrators_Guide/index.html#ch-Configuring_NTP_Using_the_chrony_Suite[Chrony Daemon (chronyd)] on those systems.
+
+. *Configure DNS or /etc/hosts*: Either make sure the systems can reach each other over DNS or add their names and IP addresses to **/etc/hosts**. For example, entries in the */etc/hosts* file on each system could appear as follows:
+
+  192.168.122.119   master master.example.com
+  192.168.122.196   node1 node1.example.com
+  192.168.122.27    node2 node2.example.com
+
+. *Subscribe each system*: Subscribe all three systems using the *subscription-manager* command as follows:
+
+  # subscription-manager register --auto-attach --username=<rhnuser> --password=<password>
+
+. *Upgrade each system*: Upgrading to the latest software is done differently, depending on whether you are working on a RHEL Server or RHEL Atomic Host system. Also, RHEL Atomic Host has Docker already installed, but to get Docker on a RHEL Server you need to enable a couple of repositories and install the docker package:
++
+On a RHEL Atomic Host, system type the following:
+
+  # atomic host upgrade
+  # reboot
+
++
+On a RHEL Server system, type the following:
+
+  # yum upgrade -y
+  # subscription-manager repos --enable=rhel-7-server-extras-rpms
+  # subscription-manager repos --enable=rhel-7-server-optional-rpms
+  # yum install docker
+
+. *Disable firewalld*: If you are using a RHEL 7 host, be sure that the firewalld service is disabled (the firewalld service is not installed on RHEL Atomic Host). On RHEL 7, type the following to disable and stop the firewalld service:
+
+  # systemctl disable firewalld
+  # systemctl stop firewalld
+
+. *Start and Enable docker*: To make sure the docker service is running on each system (the master and both nodes), run the following
+
+  # systemctl restart docker
+  # systemctl enable docker
+  # systemctl status docker
+  * docker.service - Docker Application Container Engine
+     Loaded: loaded (/usr/lib/systemd/system/docker.service; enabled; vendor preset: disabled)
+    Drop-In: /usr/lib/systemd/system/docker.service.d
+             |-flannel.conf
+     Active: active (running) since Wed 2015-11-04 15:37:10 EST; 22h ago
+  ...
+
+. *Get Docker Containers*: Build a web server and a database container using the following instructions:
++
+* link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-guide/#install_and_deploy_an_apache_web_server_container[Simple Apache Web Server in a Docker Container]
+* link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-guide/#install_and_deploy_a_mariadb_container[Simple Database Server in a Docker Container]
+
++
+After you build, test and stop the containers (*docker stop mydbforweb* and *docker stop mywebwithdb*), add them to a registry.
+
++
+*NOTE*: The docker-distribution package is not available on RHEL Atomic Host systems. If you are using RHEL Atomic, you can install that package on a separate RHEL system and point to that system when you tag and push the containers. For example: **docker tag c29665465a6c registry.example.com:5000/dbforweb**
+
+. *Install registry*: To get the Docker Registry service (v2) on your local system, you must install the docker-distribution package. For example:
++
+....
+# yum install docker-distribution
+....
+
+. *Start the local Docker Registry*: To start the local Docker Registry, type the following:
++
+....
+# systemctl start docker-distribution
+# systemctl enable docker-distribution
+# systemctl is-active docker-distribution
+active
+....
+
+. *Tag images*: Using the image ID of each image, tag the two images so they can be pushed to your local Docker Registry. Assuming the registry is running on the local system, tag the two images as follows:
++
+....
+# docker images
+REPOSITORY    TAG         IMAGE ID      CREATED          VIRTUAL SIZE
+dbforweb      latest      c29665465a6c  4 minutes ago    556.2 MB
+webwithdb     latest      80e7af79c507  14 minutes ago   405.6 MB
+# docker tag c29665465a6c localhost:5000/dbforweb
+# docker push localhost:5000/dbforweb
+# docker tag 80e7af79c507 localhost:5000/webwithdb
+# docker push localhost:5000/webwithdb
+....
+
+The two images are now available from your own Docker Registry. You are ready to start setting up Kubernetes.
+
+=== Setting up Kubernetes
+With the three systems in place, the next thing is to set up Kubernetes. This procedure varies slightly depending on whether you are:
+
+* Setting up a master or a node
+* Using RHEL Server or RHEL Atomic Host systems
+
+*IMPORTANT*: Be sure to configure and start the master before you start the nodes. If the nodes come up and the master is not yet up, the nodes may not be properly registered with Kubernetes.
+
+
+=== Setting up Kubernetes on the Master
+The following steps describe how to set up and run the services on the Kubernetes master. The first three services are run directly as systemd services while others run from containers:
+
+* docker
+* etcd 
+* flannel
+* kube-apiserver 
+* kube-controller-manager
+* kube-scheduler
+
+==== Configuring etcd and flanneld on the master
+
+. *Install Kubernetes*: If you are on a RHEL 7 system, install the kubernetes-master, kubernetes-node, flannel, and etcd packages on the master.  (You can skip this step on RHEL Atomic, since those packages are already there):
+
+  # yum install kubernetes-master kubernetes-node flannel etcd
+
+. *Configure the etcd service*: Edit the */etc/etcd/etcd.conf*. The etcd service needs to be configured to listen on all interfaces to ports 2380 (ETCD_LISTEN_PEER_URLS) and port 2379 (ETCD_LISTEN_CLIENT_URLS), and listen on 2380 on localhost (ETCD_LISTEN_PEER_URLS). The resulting uncommented lines in this file should appear as follows:
+
+  ETCD_NAME=default
+  ETCD_DATA_DIR="/var/lib/etcd/default.etcd"
+  ETCD_LISTEN_CLIENT_URLS="http://0.0.0.0:2379"
+  ETCD_LISTEN_PEER_URLS="http://localhost:2380"
+  ETCD_ADVERTISE_CLIENT_URLS="http://0.0.0.0:2379"
+
+. *Edit the Kubernetes config file*: Edit the */etc/kubernetes/config* file and change the KUBE_MASTER line to identify the location of your master server (it points to 127.0.0.1, by default). Leave other settings as they are. The changed line appears as follows:
+
+  KUBE_MASTER="--master=http://master.example.com:8080"
+
+. *Start master systemd services*: From the master, run the following *for* loop to start and enable Kubernetes systemd services on the master:
++
+....
+# for SERVICES in docker etcd; do
+    systemctl restart $SERVICES
+    systemctl enable $SERVICES
+    systemctl is-active $SERVICES
+    done
+....
+
+. *Create Flannel network configuration file*: On the master, identify a set of IP addresses and network type in a Flannel configuration file (in json format). For this example, flannel assigns an address range of *10.20.0.0/16* to be used by all nodes in the Kubernetes environment. This allows 24 separate subnets within that range to be assigned to network interfaces on the master and both nodes. For the three systems in this example, the steps below resulted in the following address ranges being assigned to flannel.1 and docker0 interfaces (yours may differ):
+
++
+** master:
+*** flannel.1: 10.20.21.0/16
+** node1:
+*** flannel.1: 10.20.26.0/16
+*** docker0: 10.20.26.1/24
+** node2:
+*** flannel.1: 10.20.37.0/16
+*** docker0: 10.20.37.1/24
+
++
+To implement these addresses, create a file called *flannel-config.json* that contains the following content:
+
++
+....
+{
+  "Network": "10.20.0.0/16",
+  "SubnetLen": 24,
+  "Backend": {
+    "Type": "vxlan",
+    "VNI": 1
+  }
+}
+....
+
+. *Upload Flannel configuration to etcd service*: On the master, to upload the flannel configuration file to the etcd service, type the following:
++
+....
+# etcdctl set atomic.io/network/config < flannel-config.json
+
+  {"action":"set","node":{"key":"/atomic.io/network/config","value":"{\n\"Network\":  \"10.20.0.0/16\",\n\"SubnetLen\": 24,\n\"Backend\": {\n\"Type\":  \"vxlan\",\n\"VNI\": 1\n      }\n}\n","modifiedIndex":10,"createdIndex":10},"prevNode":{"key":"/atomic.io/network/config","value":"","modifiedIndex":9,"createdIndex":9}}
+....
++
+Then check that the upload completed properly:
++
+....
+# etcdctl get atomic.io/network/config
+{
+  "Network": "10.20.0.0/16",
+  "SubnetLen": 24,
+  "Backend": {
+    "Type": "vxlan",
+    "VNI": 1
+  }
+}
+....
+
+. *Configure flanneld overlay network*: When the flanneld systemd service starts up, it reads the */etc/sysconfig/flanneld* file for options to pass to the flanneld daemon. On the master, edit */etc/sysconfig/flanneld* to insert the name or IP address of the system containing the etcd service (master).
+Leave the FLANNEL_ETCD_KEY line as it is:
++
+....
+FLANNEL_ETCD="http://master.example.com:2379"
+FLANNEL_ETCD_KEY="/atomic.io/network"
+....
+
++
+*IMPORTANT*: Because the docker0 interface is probably already in place when you run this procedure, the IP address range assigned by flanneld to docker0 will not immediately take effect. To get the flanneld address ranges to take effect, you need to stop docker (*systemctl stop docker*), delete the docker0 interface, and restart the docker interface (*systemctl start docker*). Later in the procedure, a simple reboot takes care of that.
+
++
+*NOTE*: The etcd service must be running before flanneld can start.
+
+. *Enable the flanneld service and reboot*: From the master, run the following commands to enable the flanneld service and reboot. The reboot is needed for the docker service to pick up the new IP addresses:
+
++
+....
+# systemctl enable flanneld
+# systemctl reboot
+....
+
+==== Configuring kubernetes services on the master
+
+The Kubernetes services that run on the master (kube-apiserver, kube-controller-manager, and kube-scheduler) are available from containers. To manage those Kubernetes services as pods, we need to start the kubelet service. The steps for setting up manifest files and making those containers ready to run are described below.
+
+Once the kubelet service and the associated master services and manifest files are in place, simply starting the kubelet service will bring up all the Kubernetes master services.
+
+. *Modify the kubelet file*: On the Kubernetes master, configure settings in the */etc/kubernetes/kubelet* file. The kubelet service is running on the master so that the other Kubernetes services you run later can be launched as pods. Here's an example of what that file should look like:
+
++
+....
+KUBELET_ADDRESS="--address=0.0.0.0"
+KUBELET_HOSTNAME="--hostname-override=master.example.com"
+KUBELET_ARGS="--register-node=true --config=/etc/kubernetes/manifests"
+KUBELET_API_SERVER="--api_servers=http://master.example.com:8080"
+KUBELET_POD_INFRA_CONTAINER="--pod-infra-container-image=registry.access.redhat.com/rhel7/pod-infrastructure:latest"
+....
+
+. *Create manifests directory*: On the Kubernetes master, create the */etc/kubernetes/manifests* directory. The files you later place in this directory tell the kubelet service how to start up the Kubernetes master services:
+
++
+....
+mkdir -p /etc/kubernetes/manifests
+....
+
+. *Create manifest files*: On the Kubernetes master, create the manifest files described below and save them to the */etc/kubernetes/manifests* directory under the names noted (apiserver.pod.json, controller-manager.pod.json, and scheduler.pod.json). The kublet service you launch in the next step uses those files to configure and start the remaining Kubernetes services. After you create the files, make the following modifications:
+
++
+** Set *--etcd_servers=* to the name or IP address of the Kubernetes master (master.example.com is used here as an example)
+** Check that the address range set in apiserver.pod.json for internal Kubernetes communications (10.254.0.0/16) doesn't conflict with other network addresses within the cluster
+
++
+*apiserver.pod.json*
+
++
+....
+{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "kube-apiserver"
+  },
+  "spec": {
+    "hostNetwork": true,
+    "containers": [
+      {
+        "name": "kube-apiserver",
+        "image": "rhel7/kubernetes-apiserver",
+        "command": [
+          "/usr/bin/kube-apiserver",
+          "--v=0",
+          "--address=0.0.0.0",
+          "--etcd_servers=http://master.example.com:2379",
+          "--service-cluster-ip-range=10.254.0.0/16",
+          "--admission_control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ResourceQuota"
+        ],
+        "ports": [
+          {
+            "name": "https",
+            "hostPort": 443,
+            "containerPort": 443
+          },
+          {
+            "name": "local",
+            "hostPort": 8080,
+            "containerPort": 8080
+          }
+        ],
+        "volumeMounts": [
+          {
+            "name": "etcssl",
+            "mountPath": "/etc/ssl",
+            "readOnly": true
+          },
+          {
+            "name": "config",
+            "mountPath": "/etc/kubernetes",
+            "readOnly": true
+          }
+        ],
+        "livenessProbe": {
+          "httpGet": {
+            "path": "/healthz",
+            "port": 8080
+          },
+          "initialDelaySeconds": 15,
+          "timeoutSeconds": 15
+        }
+      }
+    ],
+    "volumes": [
+      {
+        "name": "etcssl",
+        "hostPath": {
+          "path": "/etc/ssl"
+        }
+      },
+      {
+        "name": "config",
+        "hostPath": {
+          "path": "/etc/kubernetes"
+        }
+      }
+    ]
+  }
+}
+....
+
+
++
+*controller-manager.pod.json*
+
++
+....
+{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "kube-controller-manager"
+  },
+  "spec": {
+    "hostNetwork": true,
+    "containers": [
+      {
+        "name": "kube-controller-manager",
+        "image": "rhel7/kubernetes-controller-mgr",
+        "volumeMounts": [
+          {
+            "name": "etcssl",
+            "mountPath": "/etc/ssl",
+            "readOnly": true
+          },
+          {
+            "name": "config",
+            "mountPath": "/etc/kubernetes",
+            "readOnly": true
+          }
+        ],
+        "livenessProbe": {
+          "httpGet": {
+            "path": "/healthz",
+            "port": 10252
+          },
+          "initialDelaySeconds": 15,
+          "timeoutSeconds": 15
+        }
+      }
+    ],
+    "volumes": [
+      {
+        "name": "etcssl",
+        "hostPath": {
+          "path": "/etc/ssl"
+        }
+      },
+      {
+        "name": "config",
+        "hostPath": {
+          "path": "/etc/kubernetes"
+        }
+      }
+    ]
+  }
+}
+....
+
++
+*scheduler.pod.json*
+
++
+....
+{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "kube-scheduler"
+  },
+  "spec": {
+    "hostNetwork": true,
+    "containers": [
+      {
+        "name": "kube-scheduler",
+        "image": "rhel7/kubernetes-scheduler",
+        "volumeMounts": [
+          {
+            "name": "config",
+            "mountPath": "/etc/kubernetes",
+            "readOnly": true
+          }
+        ],
+        "livenessProbe": {
+          "httpGet": {
+            "path": "/healthz",
+            "port": 10251
+          },
+          "initialDelaySeconds": 15,
+          "timeoutSeconds": 15
+        }
+      }
+    ],
+    "volumes": [
+      {
+        "name": "config",
+        "hostPath": {
+          "path": "/etc/kubernetes"
+        }
+      }
+    ]
+  }
+}
+
+....
+
+. *Stop Kubernetes systemd services*: To run containerized Kubernetes master services, you need to make sure the those same services are stopped and disabled from systemd. Then you need to configure the container services as follows:
+
++
+....
+# for SERVICES in kube-apiserver kube-controller-manager kube-scheduler; do
+    systemctl stop $SERVICES
+    systemctl disable $SERVICES
+    systemctl is-active $SERVICES
+    done
+# systemctl restart etcd ; systemctl enable etcd
+....
+
+. *Get the kubernetes master containers*: To pull the Kubernetes containers you need, on the master run the following (note that you do not start these containers since the kubelet service will do that automatically):
+
++
+....
+# docker pull rhel7/kubernetes-controller-mgr
+# docker pull rhel7/kubernetes-apiserver
+# docker pull rhel7/kubernetes-scheduler
+....
+
+. *Start the kubelet service to launch the Kubernetes service containers*: To start the Kubernetes services you just pulled, enable and start the kubelet and kube-proxy services as follows:
+
++
+....
+# systemctl enable kube-proxy kubelet
+# systemctl start kube-proxy kubelet
+....
+
++
+. *Reboot the system*: By rebooting the system as follows, you can ensure a clean set of Kubernetes master services:
+
++
+....
+# systemctl reboot
+....
+
++
+*IMPORTANT*: It can take a few minutes for all the Kubernetes master services to come up. Be patient.
+
+. *Check kubernetes master services*: Because the kubernetes services are not running as systemd services, you cannot use *systemctl* to check that the services are running. Instead, use the *ps* command as follows:
+
++
+....
+# ps -ef | grep kube
+root  963     1  0 Feb15 ?        00:00:04 /usr/bin/kube-proxy...
+root 1461     1 14 00:00 ?        00:05:00 /usr/bin/kubelet...
+root 2283  1167  0 00:01 ?        00:00:10 /usr/bin/kube-controller-manager...
+root 2299  1167  0 00:01 ?        00:00:04 /usr/bin/kube-scheduler...
+root 2312  1167  0 00:01 ?        00:00:02 /usr/bin/kube-apiserver...
+....
+
+=== Setting up Kubernetes on the Nodes
+On each of the two Kubernetes nodes (node1.example.com and node2.example.com in this example), you need to edit several configuration files and start and enable several Kubernetes services:
+
+. *Install Kubernetes*: If your nodes are RHEL 7 systems, install the kubernetes-node package on each node. (Kubernetes is already installed on RHEL Atomic):
+
++
+....
+# yum install kubernetes-node flannel
+....
+
+. *Edit /etc/kubernetes/config*: Edit the KUBE_MASTER line in this file to identify the location of your master (it is 127.0.0.1, by default).
+Leave other settings as they are.
++
+....
+KUBE_MASTER="--master=http://master.example.com:8080"
+....
+
+. *Edit /etc/kubernetes/kubelet*: Set the following values in the */etc/kubernetes/kubelet* file, changing node?.example.com with the local node's name on each node (such as node1.example.com). In particular, you will modify KUBELET_ADDRESS (0.0.0.0 listen on all network interfaces), KUBELET_HOSTNAME (replace hostname_override with the hostname or IP address of the local system), set KUBELET_ARGS to "--register-node=true", and KUBELET_API_SERVER (set --api_servers=http://master.example.com:8080 or other location of the master), as shown below:
++
+....
+KUBELET_ADDRESS="--address=0.0.0.0"
+KUBELET_HOSTNAME="--hostname-override=node?.example.com"
+KUBELET_ARGS="--register-node=true"
+KUBELET_API_SERVER="--api_servers=http://master.example.com:8080"
+....
+
+. *Start the Kubernetes nodes systemd services*: On each node, you need to start several services associated with a Kubernetes node:
++
+....
+# for SERVICES in docker kube-proxy.service kubelet.service; do
+    systemctl restart $SERVICES
+    systemctl enable $SERVICES
+    systemctl status $SERVICES
+done
+....
+
+. *Configure flanneld overlay network*: When the flanneld systemd service starts up, it reads the */etc/sysconfig/flanneld* file for options to pass to the flanneld daemon. On both nodes, edit */etc/sysconfig/flanneld* to insert the name or IP address of the system containing the etcd service (master).
+Leave the FLANNEL_ETCD_KEY line as it is:
++
+....
+FLANNEL_ETCD="http://master.example.com:2379"
+FLANNEL_ETCD_KEY="/atomic.io/network"
+....
+
++
+*NOTE*: The etcd service must be running before flanneld can start. So, if flanneld and docker are failing to start, make sure that etcd is up and running on the master, then try to restart each node.
+
+. *Enable and start flanneld*: Run the following commands on each node to enable and start the flanneld service, then reboot each node, as follows:
+
++
+....
+# systemctl start flanneld
+# systemctl enable flanneld
+# systemctl reboot
+....
+
+. *Check the services*: Run the *netstat* command on each of the three systems to check which ports the services are running on. The etcd service should only be running on the master.
++
+* On master:
++
+....
+# netstat -tulnp | grep -E "(kube)|(etcd)"
+....
+
+* On nodes:
++
+....
+# netstat -tulnp | grep kube
+....
++
+*NOTE*: Although the firewalld service is not installed in Atomic (and should be disabled on RHEL) for this procedure, it is possible that you might be using iptables rules directly to block access to ports on your system. If you have done that, the *netstat* command just shown displays the ports you need to have accessible on each system for the Kubernetes cluster to work.
+So you can create individual firewall rules to open access to those ports.
+
+. *Test the etcd service*: Use the curl command from any of the three systems to check that the etcd service is running and accessible:
++
+....
+# curl -s -L http://master.example.com:2379/version
+{"etcdserver":"2.2.5","etcdcluster":"2.2.0"}
+....
+
+. *Check the nodes*: From the master, type the following command to make sure the master is communicating with the two nodes:
++
+....
+# kubectl get nodes
+NAME      LABELS                          STATUS    AGE
+master    kubernetes.io/hostname=master   Ready     3h
+node1     kubernetes.io/hostname=node1    Ready     3h
+node2     kubernetes.io/hostname=node2    Ready     3h
+
+....
+
+. *Check flannel.1 network interfaces*: Run the following commands from any system to check that the flannel.1 network interface is configured properly on each system. The first command runs the *ip a* command on each node to check for the flannel.1 interface. The second command shows how the subnet is configured for flannel on each system.
++
+....
+# for i in 1 2; do ssh root@node$i ip a l flannel.1; done | grep 'inet '
+root@node1's password: <password>
+    inet 10.20.26.0/16 scope global flannel.1
+root@node2's password: <password>
+    inet 10.20.37.0/16 scope global flannel.1
+# for i in master node1 node2; \
+     do echo --- $i ---; ssh root@$i cat /run/flannel/subnet.env; done
+root@master's password: <password>
+--- master ---
+FLANNEL_NETWORK=10.20.0.0/16
+FLANNEL_SUBNET=10.20.21.1/24
+FLANNEL_MTU=1450
+FLANNEL_IPMASQ=false
+root@node1's password: password
+--- node1 ---
+FLANNEL_NETWORK=10.20.0.0/16
+FLANNEL_SUBNET=10.20.26.1/24
+FLANNEL_MTU=1450
+FLANNEL_IPMASQ=false
+root@node2's password: password
+--- node2 ---
+FLANNEL_NETWORK=10.20.0.0/16
+FLANNEL_SUBNET=10.20.37.1/24
+FLANNEL_MTU=1450
+FLANNEL_IPMASQ=false
+....
+
+. *Allow access to registry on each node*: If the containers you plan to run are on an insecure registry (like the one set up earlier in this procedure using the docker-distribution package), you need to identify that registry as insecure to the docker daemon on each node. To do that, edit the */etc/sysconfig/docker* file and identify the host and port (5000) associated with the registry. For example, for a registry with a hostname of registry.example.com, add the following line, then restart the docker daemon:
+
++
+....
+INSECURE_REGISTRY='--insecure-registry registry.example.com:5000'
+....
+
+. *Start a container to get flannel addresses*: One further test you can do is to check the address range of the flannel network, then run an image to make sure it picks up addresses from that network. To do this, on one of the nodes run the following:
++
+....
+# ip a | grep flannel
+3: flannel.1:  mtu 1450 qdisc noqueue state UNKNOWN
+inet 10.20.26.0/16 scope global flannel.1
+# docker run -d --name=mydbforweb registry.example.com:5000/dbforweb
+# docker inspect --format='{{.NetworkSettings.IPAddress}}' mydbforweb
+10.20.26.2
+# docker stop mydbforweb
+# docker rm mydbforweb
+....
+
+At this point, you have a configured Kubernetes cluster.
+Next, you can begin using this setup to deploy containers by configuring networking, then deploying Kubernetes services, replication controllers, and pods.
+
+=== Launching Services, Replication Controllers, and Container Pods with Kubernetes
+
+With the Kubernetes cluster in place, you can now create the yaml files needed to set up Kubernetes services, define replication controllers and launch pods of containers. Using the two containers described earlier in this topic (Web and DB), you will create the following types of Kubernetes objects:
+
+* *Services*: Creating a Kubernetes service lets you assign a specific IP address and port number to a label. Because pods and IP addresses can come and go with Kubernetes, that label can be used within a pod to find the location of the services it needs.
+
+* *Replication Controllers*: By defining a replication controller, you can set not only which pods to start, but how many replicas of each pod should start.  If a pod stops, the replication controller starts another to replace it.
+
+* *Pods*: A pod loads one or more containers, along with options associated with running the containers.
+
+In this example, we create the service objects (yaml files) needed to allow the two pods to communicate with each other. Then we create replication controllers that identify the pods that launch and maintain the Web server and database server containers described earlier. To reproduce these files, copy and paste content from this document into the files named.
+
+. *Deploy Kubernetes Service for Database server*: On the master, create a Kubernetes service yaml file that identifies a label to tie the database server container to a particular IP address and port. Here is an example using a file called *db-service.yaml*:
++
+....
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: db
+  name: db-service
+  namespace: default
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: db
+....
++
+This service in not directly accessed from the outside world. The webserver container will access it. The selector and labels name is set to db. To start that service, type the following on the master:
++
+....
+# kubectl create -f db-service.yaml
+service "db-service" created
+....
+
+. *Deploy Kubernetes ReplicationController for Database server*: Create a replication controller yaml file that identifies then number of database pods to have running (two in this case). In this example, the file is named *db-rc.yaml*:
++
+....
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: db-controller
+  labels:
+    app: db
+spec:
+  replicas: 2
+  selector:
+    app: "db"
+  template:
+    metadata:
+      labels:
+        app: "db"
+    spec:
+      containers:
+      - name: "db"
+        image: "registry.example.com:5000/dbforweb"
+        ports:
+        - containerPort: 3306
+....
++
+To start the replication controller for the webserver pod, type the following:
++
+....
+# kubectl create -f db-rc.yaml
+replicationcontroller "db-controller" created
+....
+
+. *Create Kubernetes Service yaml file for Web server and start it*: On the master, create a Kubernetes service yaml file that identifies a label to tie the Web server container to a particular IP address and port. Here is an example using a file called *webserver-service.yaml*:
++
+....
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: webserver
+  name: webserver-service
+  namespace: default
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: webserver
+....
++
+The selector and labels name is set to webserver. To start that service, type the following on the master:
++
+....
+# kubectl create -f webserver-service.yaml
+service "webserver-service" created
+....
++
+With the with the apiserver and the two services we just added running, run the following command to see those services:
++
+....
+# kubectl get services
+NAME              CLUSTER_IP      EXTERNAL_IP   PORT(S)   SELECTOR   AGE
+kubernetes        10.254.0.1      <none>        443/TCP   <none>     11h
+db-service        10.254.192.67   <none>       3306/TCP   <none>      2h
+webserver-service 10.254.134.105  <none>         80/TCP   <none>      2h
+....
+
+. *Deploy Kubernetes ReplicationController for Web server*: Create a replication controller yaml file that identifies the number of webserver pods to have running. Based on the following yaml file, the replication controller will try to keep two pods labeled "webserver" running at all times. The pod definition is inside the replications controller yaml file, so no separate pod yaml file is needed. Any running pod with the webserver id will be taken by the replication controller as fulfilling the requirement (regardless of how the pod was started). Here's an example of a file called *webserver-rc.yaml*:
++
+....
+apiVersion: "v1"
+kind: "ReplicationController"
+metadata:
+  name: "webserver-controller"
+  labels:
+    app: "webserver"
+    uses: db
+spec:
+  replicas: 2
+  selector:
+    app: "webserver"
+  template:
+    metadata:
+      labels:
+        app: "webserver"
+    spec:
+      containers:
+        - name: "apache-frontend"
+          image: "registry.example.com:5000/webwithdb"
+          ports:
+            - containerPort: 80
+
+....
++
+To start the replication controller for the webserver pod, type the following:
++
+....
+# kubectl create -f webserver-rc.yaml
+replicationcontroller "webserver-controller" created
+....
+
+

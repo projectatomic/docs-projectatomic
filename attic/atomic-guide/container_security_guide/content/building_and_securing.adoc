@@ -1,0 +1,295 @@
+This chapter describes security concerns involving the building and
+distribution of Docker containers.
+
+*Docker's Unsigned Binary*
+
+Docker's official binary installation is not signed. 
+
+
+*The Dangers of Untrusted Content*
+
+The process of installing RPMs involves two phases: (1) the retrieval phase, and (2) the istallation phase. This separation between retrieval and installation does not exist in the
+Docker workflow. There are a number of CVEs related to this issue. Docker images are stored as tars, and they can escape the docker daemon without your knowing it.
+
+* docker pull is an active process - unlike RPMs, there is no separation between the retrieval phase of installation and the installation phase
+* docker containers run as root - you should run Docker content that
+has originated only from trusted vendors (that includes Red Hat, and in fact
+is primarily Red Hat).
+
+
+== Keeping Containers Fresh and Updateable
+
+This section describes processes and practices that ensure that 
+containers are fresh and updateable.
+
+
+=== Never Put Naked Pulls in FROM Instructions
+
+When writing Dockerfiles, always list the registry from which you're pulling in the FROM commands you use. In Red Hat's case, that means that you have to include the whole name of the Red Hat Container registry.
+
+This is a naked pull:
+
+....
+$ docker pull rhel7
+....
+
+This is not a naked pull:
+
+....
+$ docker pull registry.redhat.com/rhel7
+....
+
+=== Use yum update Tools
+
+In Dockerfiles, always run `yum update && yum clean all` to ensure that
+you have the freshest base image. These commands
+update the RPM content associated with the base image. This reduces the
+exposed attack surface.
+
+
+=== Using Docker Caching to Your Advantage
+
+This section explains how to use Docker caching to make your Dockerfiles
+more efficient for your workflow.
+
+==== Order Instructions to Take Advantage of Caching
+
+Docker assumes that each instruction is deterministic. Docker assumes
+that these instructions are not associative. If it encounters the same
+instructions in the same order, it caches the results. This means that if
+you have the instruction `FROM foo: dnf -y update` in the same two
+Dockerfiles in the same order, Docker will create the same base image
+from that point.
+
+Always perform installations in Dockerfiles in the same order to take
+advantage of Docker caching. Break tasks into thematic components (for
+example "adding users" or "updating software") in order to take best
+advantage of Docker's caching utilites. 
+
+==== Deliberately Break Caching In Some Situations
+
+Sometimes it is advantageous to subvert Docker's default caching
+behavior. 
+
+There are three methods to force "yum update" to run:
+
+(1) On a single machine, delete and recreate the image.
+
+(2) Insert a nonce command (for example "echo nonce") in order to break caching
+
+(3) Use a buildsystem like the OpenShift buildsystem
+
+
+////
+=== Deleting and Recreating Images
+
+To Be Done.
+
+=== Using 'echo someuuid'
+
+To Be Done.
+
+
+=== Creating Containers with OSBS/Atomic Reactor
+
+To Be Done. zdover and tjay expect this information to land the week of
+16 Aug 2015.
+////
+
+=== Ensuring the Provenance of Containers
+
+Running a private registry is the easiest way to ensure container provenance.
+OpenShift and Satellite are Red Hat products that have built-in image service options. Avoid including sensitive information in images. If anyone
+overhears them, it won't be a problem. This means that you should always
+use TLS (transport layer security), but you don't need to use
+authentication. Things that need to remain confidential should be
+abstracted up a level to the orchestration level, which we will discuss
+in the Kubernetes and OpenShift sections of this document.
+
+////
+==== Running a Private Registry with Satellite
+
+This section explains how to run a private registry with Satellite in
+order to secure the provenance of your Docker images. To Be Done.
+
+==== Running a Private Registry
+
+This section explains how to run a private registry in order to secure
+the provenance of your Docker images. To Be Done.
+////
+
+==== Distributing Docker Images Without a Registry
+
+Docker images can be distributed as tarballs that are created with the
+"docker save" command and loaded with the "docker load" command. These
+
+////
+==== Distributing Docker Images Without a Registry
+
+To Be Done. Define Notary. https://github.com/docker/notary
+
+notary is a TBD as of 04 Aug 2015 but we're going to push to get it more
+developed as of the first week of August (zdover, writing on the word of
+tjay)
+////
+
+=== Leveraging Kubernetes and OpenShift to Ensure that Containers are Immutable
+
+Immutable containers are containers that have no state.
+
+Immutability improves security by decreasing the damage that can
+be done by a local compromise. Immutable images themselves have no secrets 
+and save no state that could get corrupted. Immutable containers are trivial
+to verify because they never change. 
+
+
+==== Ways to Leverage Kubernetes and OpenShift
+
+This section describes ways to leverage Kubernetes and OpenShift to
+create immutable container images.
+
+1.  *Using Volume Mounting* - Use Kubernetes to bring in external data that is 
+    mutable (for instance, WordPress content or a database).
+2.  *Using Services* - Kubernetes and OpenShift have matchmaking services. A container can
+    be designed to depend generically on a database, and the details of
+    logging into that database can be provided at runtime.
+3.  *Using Templating* - This is the same idea as using the matchmaking services of
+    Kubernetes and Openshift applied to buildtime. Dockerfiles provide no way of
+    making users with a certain UID run on a certain cluster.
+    Use plugins to the OpenShift buildsystem to customize a given build. 
+4.  *Using Github Repositories* - Use +docker pull+ to pull in live content at 
+    runtime, for example from a private or public git repository. OpenShift has 
+    features that take this to another level: they allow you to ignore all the container
+    details and have an application all of whose details are hosted in a
+    github repo.
+
+
+==== Leveraging Kubernetes to Ensure that Containers Do Not Store Secrets or Sensitive Information
+
+Kubernetes has a "secrets" functionality that allows memory-hosted
+secrets to be inserted as virtual files at runtime. This should be used
+for all confidential information such as authentication details and
+encryption keys.
+
+////
+===== Using Secrets
+
+TBD. Include examples. 16 Aug 2015, zdover.
+
+////
+
+== Container Analysis Tools
+
+This section describes tools for the analysis of containers.
+
+////
+=== OpenSCAP
+
+This is an extension of the well-respected openSCAP project for virtual
+machines. It searches containers for various kinds of content problems
+such as known CVEs, out-of-date content, and bad permissions. It's a
+security sanity check on container images.
+////
+
+////
+=== OpenShift Tool Similar To OpenSCAP
+
+OpenShift should have a tool similar to openSCAP that is unnamed of of 04
+Aug 2015.
+////
+
+=== Atomic Command
+
+If you use the +atomic+ command, you'll know which layers went into your
+images, and if any of those layers have been updated, you will know that
+you should rebuild your image.
+
+////
+INSERT EXAMPLE HERE.
+
+Checking if underlying layers need to be updated.
+
+
+== Things To Add to this Part
+
+1.  Canonical Dockerfile - this needs to be called something other than
+    "Canonical", since there is a company called "Canonical" and this
+    term will be ambiguous in the minds of some of our readers if it
+    stands.
+2.  Example of breaking caching - What is breaking caching? Why would you
+    want to break caching? Why would you want to make sure that you don't
+    break caching?
+3.  Example of a OSBS/reactor interaction
+4.  Canonical pod example showing secrets volume mounting and github deps
+    - Again, we need to choose a word that isn't "canonical" so that
+    ignorant readers don't think that we're talking about Ubuntu.
+5.  Example of using OpenSCAP
+6.  Showing how to be Atomic compatible throughout
+////
+
+== Locked-down, secure Firefox in a container
+
+This section explains how to deploy a secure container that runs Firefox.
+This container gives you an instance of Firefox, containerized, with the
+following features:
+
+* Completely unprivileged -- needs no extra SELinux tweaking
+* Only the list of cgroups is passed into the container from the host
+* No port redirection because the container is available only to the host
+* No X11 clipboard events or X events shared with your real host
+* No shared sound hardware
+* Everything runs with normal, non-elevated user permissions except for systemd (and systemd runs only to reap the other processes)
+* unsynced sound, flash, and interactivity.
+
+**Running Firefox Securely in a Container**
+
+. Retrieve the base image that we use to build this container:
+
+ $ curl -o Fedora-Docker-Base-22-20150521.x86_64.tar.xz -L https://download.fedoraproject.org/pub/fedora/linux/releases/22/Docker/x86_64/Fedora-Docker-Base-22-20150521.x86_64.tar.xz
+
+. Load the base image you just downloaded into the local Docker registry:
+
+ $ sudo docker load < Fedora-Docker-Base-22-20150521.x86_64.tar.xz
+
+. Create a directory to hold the Dockerfile that will map out this container:
+
+ $ mkdir -p isolated_firefox
+
+. Retrieve the Dockerfile by using this curl command:
+
+    $ curl -o isolated_firefox/Dockerfile -L http://pastebin.com/raw.php?i=cgYXQvJu
+
+. Build the container and tag it with a tag called `isolated_firefox`:
+
+    $ sudo docker build -t isolated_firefox isolated_firefox .
+
+. Run the container:
+
+    $ sudo docker run -v /sys/fs/cgroup:/sys/fs/cgroup:ro isolated_firefox
+
+. Retrieve the CONTAINER_ID by using the +docker ps+ command:
+
+    $ sudo docker ps
+
+. Retrieve the IP address of the container:
+
+    $ sudo docker inspect CONTAINER_ID| grep IPAddress\":
+
+. Open the container in vncviewer:
+
+    $ vncviewer CONTAINER_IP
+
+. To hear the audio associated with this container, open a browser and go to the following location:
++
+ http://CONTAINER_IP:8000/firefox.ogg
++
+[NOTE]
+Do not forget to include the port in the URL.
+That means that you should not forget
+to type `:8000` after the URL.
+You can also send the address of the container to VLC to play the
+content in VLC.
++
+. Run the following command to launch the VLC instance:
+
+ $ vlc http://CONTAINER_IP:8000/firefox.ogg

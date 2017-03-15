@@ -1,0 +1,160 @@
+=== Overview
+
+A Web server is one of the most basic examples used to illustrate how containers work. The procedure in this topic does the following:
+
+* Builds an Apache (httpd) Web server inside a container
+* Exposes the service on port 80 of the host
+* Serves a simple index.html file
+* Displays data from a backend server (needs additional MariaDB container described later)
+
+=== Creating and running the Apache Web Server Container
+
+. *Install system*: Install a RHEL 7 or RHEL Atomic system that includes the docker package and start the docker service.
+
+. *Pull image*: Pull the rhel7 image by typing the following:
++
+....
+# docker pull rhel7:latest
+....
+
+. *Create Directory to hold Dockerfile*: Create a directory (named mywebcontainer) that will hold a file names *Dockerfile* and another named *action*.
++
+....
+# mkdir ~/mywebcontainer
+# cd ~/mywebcontainer
+# touch action Dockerfile
+....
+
+. *Create action CGI script*: Create the *action* file in the *~/mywebcontainer* directory, which will be used to get data from the backend database server container.
+This script assumes that the `docker0` interface on the host system is at IP address *172.17.42.1*, you can login to the database 
+with the *dbuser1* user account and *redhat* as the password, and use the database named *gss*. If that is the IP address and you 
+use the database container described later, you don't need to modify this script. (You can also just ignore this script and just 
+use the Web server to get HTML content.)
++
+....
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+import MySQLdb as mdb
+import os
+
+con = mdb.connect(os.getenv('DB_SERVICE_SERVICE_HOST','172.17.42.1'), 'dbuser1', 'redhat', 'gss')
+
+with con:
+
+    cur = con.cursor()
+    cur.execute("SELECT MESSAGE FROM atomic_training")
+
+    rows = cur.fetchall()
+
+    print 'Content-type:text/html\r\n\r\n'
+    print '<html>'
+    print '<head>'
+    print '<title>My Application</title>'
+    print '</head>'
+    print '<body>'
+
+    for row in rows:
+        print '<h2>' + row[0] + '</h2>'
+
+    print '</body>'
+    print '</html>'
+
+    con.close()
+....
+
+. *Check the Dockerfile*: Create the Dockerfile file in the *~/mywebcontainer* directory as needed (perhaps only modify Maintainer_Name to add your name). Here are the contents of that file:
++
+....
+# Webserver container with CGI python script
+# Using RHEL 7 base image and Apache Web server
+# Version 1
+
+# Pull the rhel image from the local registry
+FROM rhel7:latest
+USER root
+
+MAINTAINER Maintainer_Name
+
+# Fix per https://bugzilla.redhat.com/show_bug.cgi?id=1192200
+RUN yum -y install deltarpm yum-utils --disablerepo=*-eus-* --disablerepo=*-htb-* *-sjis-*\
+    --disablerepo=*-ha-* --disablerepo=*-rt-* --disablerepo=*-lb-* --disablerepo=*-rs-* --disablerepo=*-sap-*
+
+RUN yum-config-manager --disable *-eus-* *-htb-* *-ha-* *-rt-* *-lb-* *-rs-* *-sap-* *-sjis* > /dev/null
+
+# Update image
+RUN yum update -y
+RUN yum install httpd procps-ng MySQL-python -y
+
+# Add configuration file
+ADD action /var/www/cgi-bin/action
+RUN echo "PassEnv DB_SERVICE_SERVICE_HOST" >> /etc/httpd/conf/httpd.conf
+RUN chown root:apache /var/www/cgi-bin/action
+RUN chmod 755 /var/www/cgi-bin/action
+RUN echo "The Web Server is Running" > /var/www/html/index.html
+EXPOSE 80
+
+# Start the service
+CMD mkdir /run/httpd ; /usr/sbin/httpd -D FOREGROUND
+....
+
+. *Build Web server container:* From the directory containing the Dockerfile file and other content, type the following:
++
+....
+# docker build -t webwithdb .
+Sending build context to Docker daemon 4.096 kB
+Sending build context to Docker daemon
+Step 0 : FROM rhel7:latest
+ ---> bef54b8f8a2f
+Step 1 : USER root
+ ---> Running in 00c28d347131
+ ---> cd7ef0fcaf55
+...
+....
+
+. *Start the Web server container:* To start the container image, run the following command:
++
+....
+# docker run -d -p 80:80 --name=mywebwithdb webwithdb
+....
+
+. *Test the Web server container:* To check that the Web server is operational, run the first curl command below. If you have the backend database container running, try the second command:
++
+....
+# curl http://localhost/index.html
+The Web Server is Running
+# curl http://localhost/cgi-bin/action
+<html>
+<head>
+<title>My Application</title>
+</head>
+<body>
+<h2>RedHat rocks</h2>
+<h2>Success</h2>
+</body>
+</html>
+</tt></pre>
+....
++
+If you have a Web browser installed on the localhost, you can open a Web browser to see as better representation of the few lines of output. Just open the browser to this URL: *http://localhost/cgi-bin/action*
+
+=== Tips for this container
+
+Here are some tips to help you use the Web Server container:
+
+* *Modify for MariaDB:* To use this container with the MariaDB container (described later), you may need to edit the *action* script and change the IP address from 172.17.42.1 to the host IP on the docker0 interface. To find what that address is on your host, type the following:
+
+....
+# ip a | grep docker0 | grep inet
+    inet 172.17.42.1/16 scope global docker0
+....
+
+* *Adding content:* You can include your own content, mounted from the local host, by using the -v option on the docker run command line. For example:
+
+....
+# docker run -d -p 80:80 -v /var/www/html:/var/www/html \
+     --name=mywebwithdb webwithdb
+....
+
+=== Attachments
+
+* link:files/web_cont_3.tgz[Apache Web container tar file: action CGI script and Dockerfile]

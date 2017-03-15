@@ -1,0 +1,177 @@
+The Docker SELinux security policy is similar to the libvirt security
+policy and is based on the libvirt security policy.
+
+The libvirt security policy is a series of SELinux policies that defines
+two ways of isolating virtual machines. Generally, virtual machines are
+prevented from accessing parts of the network. Specifically, individual
+virtual machines are denied access to one another's resources. Red Hat
+extends the libvirt-SELinux model to Docker. The Docker
+SELinux role and Docker SELinux types are based on libvirt. For example,
+by default, Docker has access to /usr/var/ and some other locations, but
+it has complete access to things that are labeled with
+svirt_sandbox_file_t.
+
+https://www.mankier.com/8/docker_selinux - this explains the entire
+Docker SELinux policy. It is not in layman's terms, but it is complete.
+
+svirt_sandbox_file_t
+
+
+    system_u:system_r:svirt_lxc_net_t:s0:c186,c641
+
+         ^      ^           ^          ^     ^--- unique category
+         |      |           |          |----  secret-level 0
+         |      |           |--- a shared type
+         |      |---SELinux role
+         |------ SELinux user
+
+
+If a file is labeled *svirt_sandbox_file_t*, then by default all containers
+can read it. But if the containers write into a directory that has
+*svirt_sandbox_file_t* ownership, they write using their own category
+(which in this case is "c186,c641). If you start the same container twice,
+it will get a new category the second time ( a different category than it
+had the first time).  The category system isolates containers from one
+another.
+
+Types can be applied to processes and to files.
+
+
+=== libvirt SELinux
+
+libvirt SELinux -- RH is extending libvirt SELinux for Docker. The
+extension of libvirt SELinux to Docker is substantially 
+RH-contributed work.
+
+
+=== MCS - Multi-Category Security
+
+MCS - Multi-Category Security - this is similar to Multi-Level
+Authentication. Each container is given a unique ID at startup, and each
+file that a container writes carries that unique ID. Although this is an 
+opt-in system, failure to make use of it means that you will have no 
+isolation between containers. If you do not make use of MCS, you will have 
+isolation between containers and the host, but you will not have isolation
+of containers from one another. That means that one container could access 
+another container's files.
+
+https://securityblog.redhat.com/2015/04/29/container-security-just-the-good-parts/
+- this will be used later to build the MCS example that we will include
+in the MCS.
+
+
+=== Leveraging the Docker SELinux Security Model
+
+*properly labeling content* - By default, docker gets access to everything in
+*/usr* and most things in */etc*. To give docker access to more than that,
+relabel content on the host. To restrict access to things in */usr* or things in
+*/etc*, relabel them.  If you want to restrict access to only one or two
+containers, then you'll need to use the opt-in MCS system.
+
+*important booleans and other restrictions* - "privileged" under docker is
+not really privileged. Even privileged docker processes cannot access
+arbitrary socket files. An selinux boolean, *docker_connect_any*, makes it
+possible for privileged docker processes to access arbitrary socket files.
+Even if run privileged, docker is restricted by the booleans that are in
+effect.
+
+*docker_connect_any* - see "important booleans and other
+restrictions"
+
+*https://github.com/rhatdan/docker-selinux* - dwalsh's github repository.
+
+*restricting kernel capabilities* - docker supports two commands as part of
+"docker run": (1) "--cap-add=" and (2) "--cap-drop=". these allow us to
+add and drop kernel capabilites to and from the containers. root powers
+have been broken up into a number of groups of capabilities (for instance
+"cap-chown", which lets you change the ownership of files). by default,
+docker has a very restricted list of capabilites (provide this restricted
+list here as well as a datestamp communicating the date of the list's
+compilation).
+
+*http://linuxmanpages.net/manpages/fedora21/man7/capabilities.7.html* -
+This provides more information about capabilites.  Capabilites constitute
+the heart of the isolation of containers. If you have used capabilites in
+the manner described in this guide, an attacker who does not have a kernel
+exploit will be able to do nothing even if they have root on your system.
+
+*restricting kernel calls with seccomp* - This is a kernel call that
+renounces capabilities. A seccomp call that has no root capabilities will
+make the call to the kernel. A capable process creates a restricted process
+that makes the kernel call. "seccomp" is an abbreviation of "secure
+computing mode".
+
+*http://man7.org/linux/man-pages/man2/syscalls.2.html* - *seccomp* is even
+more fine-grained than capabilites.  This feature restricts the kernel
+calls that containers can make. This is useful for general security
+reasons, because (for instance) you can prevent a container from calling
+"cd".  Almost all kernel exploits rely on making kernel calls (usually to
+rarely used parts of the kernel). With seccomp you can drop lots of kernel
+calls, and dropped kernel calls can't be exploited as attack vectors.
+
+*docker network security and routing* - By default, docker creates a
+virtual ethernet card for each container. Each container has its own
+routing tables and iptables. When specific ports are forwarded, docker
+creates certain host iptables rules. The docker daemon itself does some of
+the proxying. If you map applications to containers, you provide
+flexibility to yourself by limiting network access on a per-application
+basis. Because containers have their own routing tables, they can be
+used to limit incoming and outgoing traffic: use the +ip route+ command 
+in the same way you would use it on a host.
+
+*scenario:* using a containerized firewall to segregate a particular kind
+of internet traffic from other kinds of internet traffic. This is an easy and
+potentially diverting exercise for the reader, and might involve concocting
+scenarios in which certain kinds of traffic are to be kept separate from
+an official network (one that is constrained, for instance, by the
+surveillance of a spouse or an employer).
+
+*cgroups* - "control groups". cgroups provides the core functionality that
+permits docker to work. In its original implementation, cgroups controlled
+access only to resources like the CPU. You could put a process in a cgroup, and
+then instruct the kernel to give that cgroup only up to 10 percent of the cpu.
+This functions as a kind of a way of providing SLA or quota. 
+
+By default, docker creates a unique cgroup for each container. If you have
+existing cgroup policy on the docker daemon host, you can make use of that
+existing cgroup policy to control the resource consumption of the specified
+container. 
+
+////
+example: we will show an example that comprises two containers,
+each in a different cgroup, each having been set at the cgroup level to
+consume a different amount of resources.
+////
+
+*freezing and unfreezing a container* - You can completely stall a
+container in the state that it is in a any given moment, and then restart
+it at that point later. This is done by giving the container
+zero percent cpu. cgroups is the protection that docker provides against
+ddos attacks. We could host a service on a machine and give it a cgroup
+priority so that the service can never get less than ten percent of the
+cpu: then if other services became compromised, they would be unable to
+stall out the service, because the service is guaranteed to get a minimum
+of ten percent of the cpu. This makes it possible to ensure that essential
+processes need never relinquish control of a part of the cpu, no matter how
+strongly they are attacked.
+
+////
+/sys/fs/cgroup virtual file system. by default, the containers don't have
+access to /sys/fs/cgroup.
+////
+
+////
+mount view of /
+
+ipc view of shared memory and other interprocess communication
+
+net view of the network
+
+pid view of pids
+
+cpu resources
+
+memory resources
+
+network resources
+////

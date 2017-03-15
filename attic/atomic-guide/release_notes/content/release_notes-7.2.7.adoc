@@ -1,0 +1,58 @@
+This release doesn't include any updated images and the latest version of Atomic Host cloud images remains at 7.2.6-1. The latest "Red Hat Atomic Host Installer" ISO image remains at 7.2.3-1 as well. OSTree has been updated and new deployments can be created with any of those images and updated to the latest release by running the `atomic host upgrade` command.
+
+=== Atomic Host
+
+*OStree update*:
+
+New Tree Version: 7.2.7 (hash: dae35767902aad07b087d359be20f234d244da79fdd4734cd2fbc3ee39b12cf8) +
+Changes since Tree Version 7.2.6 (hash: 347c3f5eb641e69fc602878c646cf42c4bcd5d9f36847a1f24ff8f3ec80f17b1)
+
+*Updated packages*:
+
+* selinux-policy-3.13.1-63.atomic.el7.7
+
+=== Extras
+
+*Updated packages*:
+
+* docker-1.10.3-46.el7.14
+* docker-latest-1.12.1-2.el7
+* etcd-2.3.7-4.el7
+* oci-register-machine-0-1.8.gitaf6c129.el7
+
+==== Container Images
+
+*Updated*:
+
+*	Red Hat Enterprise Linux Container Image (rhel7/rhel)
+*	Red Hat Enterprise Linux Atomic Tools Container Image (rhel7/rhel-tools)
+*	Red Hat Enterprise Linux Atomic rsyslog Container Image (rhel7/rsyslog)
+*	Red Hat Enterprise Linux Atomic sadc Container Image (rhel7/sadc)
+*	Red Hat Enterprise Linux Atomic cockpit-ws Container Image (rhel7/cockpit-ws)
+*	Red Hat Enterprise Linux Atomic etcd Container Image (rhel7/etcd)
+*	Red Hat Enterprise Linux Atomic Kubernetes-controller Container Image (rhel7/kubernetes-controller-mgr)
+*	Red Hat Enterprise Linux Atomic Kubernetes-apiserver Container Image (rhel7/kubernetes-apiserver)
+*	Red Hat Enterprise Linux Atomic Kubernetes-scheduler Container Image (rhel7/kubernetes-scheduler)
+*	Red Hat Enterprise Linux Atomic SSSD Container Image (rhel7/sssd) (Technology Preview)
+* Red Hat Enterprise Linux Atomic openscap Container Image (rhel7/openscap) (Technology Preview)
+
+=== New Features
+
+* *docker-latest has been upgraded to version 1.12.1*
++
+The _docker-latest_ packages are now version 1.12.1. The following article has been updated to reflect the changes link:https://access.redhat.com/articles/2317361[Introducing docker-latest for RHEL 7 and RHEL Atomic Host].
+
+* *docker 1.12 uses runc as a runtime environment*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1366405
++
+Since docker version 1.11, `runc` is used instead of `libcontainer` for container runtime. The _docker-latest_ packages contain 1.12, and `runc` can be found in `/usr/libexec/docker/docker-runc`. However, `docker-runc` is for internal use only by docker. If you want to use the *runc* command, you still need the _runc_ package installed on your system. For RHEL Atomic Host, it is part of the OSTree by default, and for Red Hat Enterprise Linux 7, it is available as a separate package.
++
+[IMPORTANT]
+Red Hat does not support modifying which runc binary is used by docker.
+
+* *docker swarm is now available*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=XXXXXX
++
+As of 1.12 release, the upstream Docker project has embedded *Docker Swarm* in the docker  binary. To avoid any unintended bugs, Red Hat has chosen to include Swarm as an unsupported add-on. For container orchestration, Red Hat recommends OpenShift and Kubernetes.

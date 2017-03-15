@@ -1,0 +1,5 @@
+= Recommended Practices for Container Development
+:imagesdir: images
+
+include::content/recommended_practices_for_container_development.adoc[]
+

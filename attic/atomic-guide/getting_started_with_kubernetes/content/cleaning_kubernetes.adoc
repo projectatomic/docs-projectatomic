@@ -1,0 +1,32 @@
+If you are done using your cluster, you should take it down in a particular way, to make sure it is done neatly. The order is important. If you delete a pod before deleting the replicationController, the pod is restarted. Here is an example:
+
+....
+# kubectl delete replicationControllers webserver-controller
+# kubectl delete replicationControllers db-controller
+# kubectl delete services webserver-service
+# kubectl delete services db-service
+# kubectl get pods
+NAME                                         READY     STATUS    RESTARTS   AGE
+kube-apiserver-master.example.com            1/1       Running   0          1d
+kube-controller-manager-master.example.com   1/1       Running   4          1d
+kube-scheduler-master.example.com            1/1       Running   3          1d
+
+....
+
+If you plan to continue using your Kubernetes cluster, run the following on each node to make sure the services are up and running:
+
+....
+# for SERVICES in docker kube-proxy.service kubelet.service; do
+    systemctl restart $SERVICES
+    systemctl status $SERVICES
+    done
+....
+
+If you are done with the nodes, you can remove them from the master as follows:
+
+....
+# kubectl delete node node1.example.com
+# kubectl delete node node2.example.com
+....
+
+

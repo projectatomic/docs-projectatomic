@@ -1,0 +1,45 @@
+System containers provide a way to containerize services that need to run before the docker daemon is running. They use different technologies than the Docker-formatted containers, `ostree` for storage, `runc` for runtime, `skopeo` for searching and `systemd` for service management. Previously, such services were provided in the system as packages, or as part of the ostree in Atomic Host and containerizing them makes the system itself smaller. Red Hat provides the `etcd` and `flannel` services are system containers.
+
+[NOTE]
+To use the system containers on Atomic Host, you need to have the *atomic* command-line tool version 1.12 or later, the *ostree* utility, and *runc*. All of these you already have on Atomic Host, but oyu will need to install them on RHEL.
+
+Because they are not Docker-formatted containers, you do not use the `docker` command for container management. The `atomic` command-line tool and `systemd` are used to pull, install and manage system containers. Here is a brief comparison between how you pull, install and run docker containers and system containers.
+
+** *docker*
+
+1. `docker pull rhel7/rsyslog`
+2. `atomic install rhel7/syslog`
+3. `atomic run rhel7/rsyslog`
+
+** *system containers*
+
+1. `atomic pull --storage=ostree rhel7/etcd`
+2. `atomic install --system [--set=VARIABLE] rhel7/etcd`
+(you will notice this command also runs `systemctl start etcd`)
+
+The *atomic install* command supports several options to configure the settings for system containers. The `--set` option is used to pass variables which you would normally set for this service. These variables are stored in the `manifest.json` file.
+
+To uninstall a system image, use:
+
+....
+# atomic uninstall rhel7/etcd
+....
+
+System containers use `runc` as runtime, and docker and runc images are stored in different places on the system: `/var/lib/containers/atomic/$NAME` and `/etc/systemd/system/$NAME.service` respectively.
+
+Therefore, when you use `docker images` and `docker ps` you will only see the Docker-formatted containers. The `atomic` tool will show all containers on the system:
+
+....
+# atomic containers list -a
+  CONTAINER ID IMAGE                COMMAND              CREATED          STATUS    RUNTIME
+  etcd         rhel7/etcd           /usr/bin/etcd-env.sh 2016-10-13 14:21 running   runc
+  flannel      rhel7/flannel        /usr/bin/flanneld-ru 2016-10-13 15:12 failed    runc
+  1cf730472572 rhel7/cockpit-ws     /container/atomic-ru 2016-10-13 17:55 exited    Docker
+  9a2bb24e5978 rhel7/rsyslog        /bin/rsyslog.sh      2016-10-13 17:49 created   Docker
+  34f95af8f8f9 rhel7/cockpit-ws     /container/atomic-ru 2016-09-27 19:10 exited    Docker
+....
+
+Note that unlike docker containers, where the services are managed by the docker daemon, with system containers you have to manage the dependencies between the services yourself. For example, `flannel` is a dependency for `etcd` and when you run flannel, it checks whether etcd is set up (if it is not, flannel will wait).
+
+System containers require root privileges. Because `runc` requires root, containers also run as the rool user.
+

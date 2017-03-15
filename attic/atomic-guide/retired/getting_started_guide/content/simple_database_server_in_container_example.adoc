@@ -1,0 +1,121 @@
+=== Overview
+
+Using MariaDB, you can set up a basic database in a container that can be accessed by other applications.
+The procedure in this topic does the following:
+
+* Builds a MariaDB database server inside a docker formatted container
+* Exposes the service on port 3306 of the host
+* Starts up the database service to share a few pieces of information
+* Allows a script from Web server to query the database (needs additional Web server container described later)
+* Offers tips on how to use and extend this container
+
+=== Creating and running the MariaDB Database Server Container
+
+. *Install system:* Install a Red Hat Enterprise Linux 7 or Red Hat Enterprise Linux Atomic Host system
+that includes the docker package and start the docker service.
+
+. *Pull image:* Pull the rhel7 image by typing the following:
++
+....
+# docker pull rhel7:latest
+....
+
+. *Get tarball with supporting files:* Download the tarball file attached to this article (link:files/mariadb_cont_2.tgz[mariadb_cont_2.tgz]),
+download it to a new *mydbcontainer* directory, and untar it as follows:
++
+....
+# mkdir ~/mydbcontainer
+# cp mariadb_cont*.tgz ~/mydbcontainer
+# cd ~/mydbcontainer
+# tar xvf mariadb_cont*.tgz
+gss_db.sql
+Dockerfile
+....
+
+. *Check the Dockerfile:* Modify the Dockerfile file in the *~/mydbcontainer* directory as needed (perhaps only modify Maintainer_Name to add your name).
+Here are the contents of that file:
++
+....
+# Database container with simple data for a Web application
+# Using RHEL 7 base image and MariahDB database
+# Version 1
+
+# Pull the rhel image from the local repository
+FROM rhel7:latest
+USER root
+
+MAINTAINER Maintainer_Name
+
+# Update image
+RUN yum update -y --disablerepo=*-eus-* --disablerepo=*-htb-* --disablerepo=*sjis* \
+    --disablerepo=*-ha-* --disablerepo=*-rt-* --disablerepo=*-lb-* \
+    --disablerepo=*-rs-* --disablerepo=*-sap-*
+
+RUN yum-config-manager --disable *-eus-* *-htb-* *-ha-* *-rt-* *-lb-* \
+    *-rs-* *-sap-* *-sjis-* > /dev/null
+
+# Add Mariahdb software
+RUN yum -y install net-tools mariadb-server
+
+# Set up Mariahdb database
+ADD gss_db.sql /tmp/gss_db.sql
+RUN /usr/libexec/mariadb-prepare-db-dir
+RUN test -d /var/run/mariadb || mkdir /var/run/mariadb; \
+    chmod 0777 /var/run/mariadb; \
+    /usr/bin/mysqld_safe --basedir=/usr & \
+    sleep 10s && \
+    /usr/bin/mysqladmin -u root password 'redhat' && \
+    mysql --user=root --password=redhat < /tmp/gss_db.sql && \
+    mysqladmin shutdown --password=redhat
+
+# Expose Mysql port 3306
+EXPOSE 3306
+
+# Start the service
+CMD test -d /var/run/mariadb || mkdir /var/run/mariadb; chmod 0777 /var/run/mariadb;/usr/bin/mysqld_safe --basedir=/usr
+....
+
+. *Build database server container:* From the directory containing the Dockerfile file and other content, type the following:
++
+....
+# docker build -t dbforweb .
+Sending build context to Docker daemon 528.4 kB
+Sending build context to Docker daemon
+Step 0 : FROM rhel7:latest
+ ---> bef54b8f8a2f
+Step 1 : USER root
+...
+....
+
+. *Start the database server container:* To start the container image, run the following command:
++
+....
+# docker run -d -p 3306:3306 --name=mydbforweb dbforweb
+....
+
+. *Test the database server container:* Assuming the docker0 interface on the host is 172.17.42.1 (yours may be different),
+check that the database container is operational by running the *nc* command (in RHEL 7, type *yum install nc* to get it) as shown here:
++
+....
+# nc -v 172.17.42.1 3306
+Ncat: Version 6.40 ( http://nmap.org/ncat )
+Ncat: Connected to 172.17.42.1:3306.
+R
+5.5.44-MariaDB?acL3YF31?X?FWbiiTIO2Kd6mysql_native_password Ctrl-C
+....
+
+=== Tips for this container
+
+Here are some tips to help you use the Web Server container:
+
+* *Adding your own database:* You can include your own MariaDB content
+ by copying your database file to the build directory and changing the
+ name of the database file from gss_db.sql to the name of your database
+ (in several places in the Dockerfile file).
+
+ * *Orchestrate containers:* A better way to manage this container with other containers is to use
+ Kubernetes to orchestrate them into pods.
+
+=== Attachments
+
+* link:files/mariadb_cont_2.tgz[Tar file containing gss_db.sql database and Dockerfile files for MariaDB container]

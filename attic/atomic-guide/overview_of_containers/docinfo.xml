@@ -1,0 +1,13 @@
+<productname>Red Hat Enterprise Linux Atomic Host</productname>
+<productnumber>7</productnumber>
+<subtitle>Overview of Containers in Red Hat Systems</subtitle>
+<abstract>
+ <para>Learn about the different container options in Red Hat Systems and how to get started using them</para>
+</abstract>
+<authorgroup>
+  <org>
+    <orgname>Red Hat Atomic Host Documentation Team</orgname>
+    <email>appinfra-docs@redhat.com</email>
+  </org>
+</authorgroup>
+<xi:include href="Common_Content/Legal_Notice.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />

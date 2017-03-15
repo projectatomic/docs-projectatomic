@@ -1,0 +1,35 @@
+* *Identity Management in a container*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1283777
++
+Identity Management (IdM) in a container is provided as a Technology Preview. To install this new image, use the `atomic install --hostname <IPA_server_hostname> rhel7/ipa-server` command. In addition to `--hostname`, The `atomic install` command supports the following keywords for specifying the style of the container to be run:
+
+** `net-host` - share the host's network to the container
+** `publish` - publish all ports to the host's interfaces
+** `cap-add` - add a capability to the container
+
+You can also use the  `atomic install rhel7/ipa-server help` command to list these keywords and their usage.
+
+* *overlay2 storage driver now available*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1369237
++
+The `overlay2` graph driver, along with `overlay`, uses OverlayFS, a copy-on-write union file system that features page-cache sharing between containers. However, `overlay2` is the more performant option. Currently, the driver requires SELinux to be disabled in docker. `overlay2` is available for docker as a Technology Preview feature.
++
+To enable the driver, specify *overlay2* in the _/etc/sysconfig/docker-storage-setup_ file:
++
+....
+STORAGE_DRIVER=overlay2
+....
+
+* *package layering*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=XXXXXXX
++
+The *pkg-add* subcommand is now available as part of the *rpm-ostree* tool to install layered packages that are persistent across reboots. This command can be used to install individual packages that are not part of the original OSTree, such as diagnostics tools. For detailed information about package layering, see the https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/installation-and-configuration-guide/#package_layering[Red Hat Enterprise Linux Atomic Host 7 Installation and Configuration Guide].
+
+* *SSSD in a container*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1200143
++
+The System Security Services Daemon (SSSD) in a container is provided as a Technology Preview to allow Red Hat Enterprise Linux Atomic Host authentication subsystem to be connected to central identity providers like Red Hat Identity Management and Microsoft Active Directory.

@@ -1,0 +1,45 @@
+= Installation and Configuration Guide
+:imagesdir: images
+
+== Introduction to Atomic Host
+
+=== Operating System Content
+include::content/operating_system_content.adoc[leveloffset=+1]
+
+=== System Requirements
+include::content/system_requirements.adoc[leveloffset=+1]
+
+== Types of Installation
+include::content/types_of_installation.adoc[leveloffset=+1]
+
+=== Developer Mode
+include::content/developer_mode.adoc[leveloffset=+1]
+
+=== Physical Machine Installations
+
+==== Anaconda Installation
+include::content/anaconda_installation.adoc[leveloffset=+1]
+
+==== Kickstart Installation
+include::content/kickstart_installation.adoc[leveloffset=+1]
+
+=== Virtual Machine Installations
+include::content/virtual_machine_installations.adoc[leveloffset=+1]
+
+=== PXE Installation
+include::content/pxe_installation.adoc[leveloffset=+1]
+
+== Setting up cloud-init
+include::content/cloud-init-faq.adoc[leveloffset=+1]
+
+== Post Installation Configuration
+include::content/post_installation_configuration.adoc[leveloffset=+1]
+
+== Upgrading and Downgrading
+include::content/upgrading_and_downgrading.adoc[leveloffset=+1]
+
+== Managing Atomic Hosts
+include::content/atomic_host.adoc[leveloffset=+1]
+include::content/adding_software.adoc[leveloffset=+1]
+
+

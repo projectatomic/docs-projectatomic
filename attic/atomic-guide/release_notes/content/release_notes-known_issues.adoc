@@ -1,0 +1,203 @@
+* *container-selinux does not obsolete docker-selinux on Red Hat Enterprise Linux 7 Server*
++
+//https://bugzilla.redhat.com/show_bug.cgi?id=1413535
++
+The `container-selinux` package, which provides SELinux policy modules for containers runtime, does not obsolete `docker-selinux` which provided the same functionality. As a result, they are both present on the system. To work around this issue, remove `docker-selinux` manually with the following command:
++
+....
+# yum remove-n docker-selinux
+....
++
+*Note*: This known issue does not apply to RHEL Atomic Host.
+
+* *Cannot start existing containers*
++
+//https://bugzilla.redhat.com/show_bug.cgi?id=1411980
++
+After upgrading to 7.3.2 and rebooting, the previously running containers will not start at boot. As a workaround, use the following commands as root:
++
+....
+# mount -o remount,ro /usr
+# ln -s /usr/libexec/docker/docker-runc-current /usr/bin/docker-runc
+# systemctl restart docker
+....
++
+Automatically restarted containers will be restarted immediately and will continue to run after subsequent reboots. Other containers can be started normally with `docker run`.
+
+* *RHEL Atomic Host 7.3.1 does not include tzdata-2016j-1.el7*
++
+//https://bugzilla.redhat.com/show_bug.cgi?id=1400329
++
+The Red Hat Enterprise Linux Atomic Host version 7.3.1 does not include the latest to this date `tzdata` package covered in the following erratum: link:http://access.redhat.com/errata/RHEA-2016:2832.html[RHEA-2016:2832]. The updates covered in this erratum will be included in the next release of Red Hat Enterprise Linux Atomic Host.
+
+* *The gomtree package is not a dependency for atomic.*
++
+//https://bugzilla.redhat.com/show_bug.cgi?id=1399857
++
+The `gomtree` package provides the functionality behind the `atomic verify` command. However, `gomtree` is not a dependency for `atomic`. It is included in the 7.3.1 OSTree, but because of the missing dependency, on Red Hat Enterprise Linux, you will have to install it manually along with `atomic`. This bug will be fixed in the next release of Red Hat Enterprise Linux Atomic Host.
+
+* *atomic scan will try to connect to the Internet if you do not use atomic install first*
++
+//https://bugzilla.redhat.com/show_bug.cgi?id=1381257
++
+When you install the *openscap* container image with the `atomic install` command, the `/etc/oscapd/oscapd.ini` configuration file is placed on the host machine and gets exposed to the container. The `oscapd.ini` file contains the information about where to fetch Open Vulnerability and Assessment Language (OVAL) content from. The default setting is to use the CVE data from inside the container and won't connect to the Internet unless you explicitly configure it so. When you do not use `atomic install` and directly start scanning with `atomic scan`, atomic will fetch the container and run it immediately ignoring the INSTALL label. This means that `/etc/oscapd/oscapd.ini` won't be placed on the host system and be exposed to the container and the default behavior of the `openscap-daemon` itself inside the container will be used. The default behavior is to download CVE data from Red Hat's URL, connecting to the Internet. Because of this. it is recommended that you use `atomic install` before scanning containers so that the settings from the `opscapd.ini` file are used. If not, scanning will still work, but be aware of the difference in the behavior of the openscap-daemon in both cases.
+
+* *Using Type=notify in a system container's unit file will cause starting etcd to hang*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1380160
++
+When you use the following option in a system container's unit file:
++
+....
+[Service]
+Type=notify
+....
+and then starting the service with `systemctl start <service>`, the command will hang. As a workaround, do not use the `Type=notify` option with system containers.
+
+* *Red Hat Enterprise Linux Atomic Host does not support FIPS mode*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1377226
++
+FIPS mode cannot be enabled on RHEL Atomic Host.
+
+* *Installing RHEL Atomic Host 7.3 on an iSCSI target when the initiator is runnig RHEL 7.2 fails with an error*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1376448
++
+If you are trying to install RHEL Atomic Host 7.3 on a virtual machine, which uses iSCSI disks that are being hosted on a RHEL 7.2 system, installation will fail with an error. This happens because of communication failures with the iSCSI target. As a workaround, if you want to install RHEL Atomic Host 7.3 on an iSCSI target, make sure the iSCSI initiator is running RHEL 7.3 as well.
+
+* *Upgrade to 7.3 from release versions older than 7.2.7 fails with an error on Atomic Host*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1376565
++
+Attempting to upgrade from RHEL Atomic Host 7.2.6-1 or older to 7.3 fails with the following error:
++
+....
+"error: fsetxattr: Invalid argument"
+....
++
+There are three possible workarounds:
++
+1) Disable SELinux and upgrade as usual:
++
+....
+# setenforce 0
+# atomic host upgrade
+....
++
+2) Stop `rpm-ostreed` and change the SELinux context:
++
+....
+#	systemctl stop rpm-ostreed
+#	cp /usr/libexec/rpm-ostreed /usr/local/bin/rpm-ostreed
+#	chcon -t install_exec_t /usr/local/bin/rpm-ostreed
+#	/usr/local/bin/rpm-ostreed
+#	atomic host upgrade
+....
++
+3) Deploy Atomic Host 7.2.7 first and then upgrade:
++
+....
+#	 atomic host deploy 7.2.7
+#	 systemctl reboot
+#	 atomic host upgrade
+....
+
+* *Atomic Host does not support `/usr` as a mount point*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1159073
++
+Atomic Host does not support `/usr` as a mount point. As a consequence, Anaconda could crash if such a partition layout is configured. To work around this issue, do not make `/usr` a mount point.
+
+* *etcdctl backup now reuses backup of the previous etcd member to avoid data loss*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1350875
++
+Previously, a member failed to be added to the etcd cluster when the database size was more than 700 MB, resulting in data loss. To work around this usse, the `etcdctl backup` command has been extended with options to reuse backup of the previous etcd member.
+
+* *rhel-push-plugin service does not restart after package upgrade*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1360892
+The docker service requires *rhel-push-plugin* to be started before itself. However, after upgrading the _docker_ and _docker-rhel-push-plugin_ packages, the docker daemon restarts while using the already existing *rhel-push-plugin* service in memory without restarting it. To work around this issue, manually restart *rhel-push-plugin* first, and the *docker* service afterwards.
+
+* *etcd will not start if its current version is older than the etcd cluster version*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1359917
++
+etcd checks if the etcd version is older than the etcd cluster version. If this is the case, etcd will not start and applications dependent on etcd can fail. This issue prevents RHEL Atomic Host from cleanly rolling back from version 7.2.6 to earlier versions.
+
+* *In a kubernetes cluster, if the nodes are newer than the master, they may fail to start.*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1334891
++
+In a kubernetes cluster, if the master contains an older version of kubernetes than the nodes, the nodes may fail to start. To work around this issue, always upgrade the master nodes first. As a result, the cluster will continue to function as expected.
+
+* *Cannot access the service IP with flannel 0.5.3 on kubernetes 1.2 from within a cluster node.*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1342940
++
+Accessing the service cluster IP from withing a Kubernetes node returns a timeout error. To work around this issue, add the IP specified by *--service-cluster-ip-range* of kube-apiserver (located at _/etc/kubernetes/apiserver_) as a route to the `docker0` connection. For example, if *--service-cluster-ip-range=10.254.0.0/16*, add the *10.254.0.0* IP using the following command:
++
+....
+# ip route add 10.254.0.0/16 dev docker0
+....
+
+* *docker 1.10 introduced a secomp filter which will cause some syscalls to fail inside containers.*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1343759
++
+As a workaround, pass the *--security-opt seccomp:unconfined* option to docker when creating a container.
+Docker maintains a help page with a comprehensive list of blocked calls and the reasoning behind them, see https://docs.docker.com/engine/security/seccomp/. Note that the list is not entirely identical to what is blocked in Red Hat Enterprise Linux.
+
+* *Upgrade of docker from 1.9 to 1.10 loses image metadata*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1344511
++
+Under certain circumstances, upgrading from docker 1.9 to docker 1.10 can result in a loss of docker image tag metadata. The underlying image layers remain intact and can be seen by running docker images -a. The metadata can be recovered, if it is present on a remote registry by simply re-running docker pull. This command will restore the metadata while avoiding a transfer of the already existing layer data.
+
+* *Atomic Host installation offers BTRFS but it is not supported.*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1267860
++
+The RHEL Atomic Host installer offers BTRFS as a partition option, but the tree does not include btrfs-progs. Consequently, if you choose this option in the installer, you will not be able to proceed with the installation until you choose another option.
+
+* *RHEL Atomic Host only supports the en_US.UTF-8 locale.*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1186757
++
+During installation, if you select a language other than American English as the default keyboard type, it is not reflected in the installed system afterwards. The locale is still set to en_US and error messages about locales missing are displayed. This could be problematic for programs that require other locales, or, for example, when you have a password in another language, the system will not recognize it.
+
+* *When the root partition runs out of free space*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1193704
+// https://bugzilla.redhat.com/show_bug.cgi?id=1391725
++
+RHEL Atomic Host allocates 3GB of storage to the root partition, which includes the docker volumes (units of storage that a running container can request from the host system). This makes it easy for the root partition to run out of storage space. If insufficient space is available, upgrading with `atomic host upgrade` will fail. In order to support more volume space, more physical storage must be added to the system, or the root Logical Volume must be extended. By default, 40% from the other volume, will be reserved for storing the container images. The other 60% can be used to extend the root partition. For detailed instructions, see https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-with-containers/#changing_the_size_of_the_root_partition_after_installation.
+
+* *Rescue mode does not work in RHEL Atomic Host.*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1267887
++
+The Anaconda installer is unable to find a previously installed Atomic Host system when in rescue mode. Consequently, rescue mode does not work and should not be used.
+
+* *The brandbot.path service may cause subscription-manager to change the /etc/os-release file in 7.1 installations.*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1204194
++
+The _/etc/os-release_ file may still specify the 7.1 version even after Atomic Host has been upgraded to 7.2 using the atomic host upgrade command. This occurs because the underlying ostree tool preserves modified files in _/etc_. As a workaround, after upgrading to 7.2, run the following command:
++
+....
+cp /usr/etc/os-release /etc
+....
++
+This way, the _/etc/os-release_ file will return to an unmodified state, and because `brandbot.path` is masked in 7.2.0, it will not be modified in the future by subscription-manager, and future upgrades will show the correct version.
+
+* *When running kube-apiserver on port 443 in secure mode, some capabilities are missing.*
++
+As a workaround, the kube-apiserver binary has to be modified by running
++
+....
+# chown root:root /usr/bin/kube-apiserver
+# chmod 700 /usr/bin/kube-apiserver
+# setcap CAP_NET_BIND_SERVICE=ep /usr/bin/kube-apiserver
+....

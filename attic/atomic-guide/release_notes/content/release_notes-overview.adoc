@@ -1,0 +1,32 @@
+This book covers the updates from the following CDN channels:
+
+* *Atomic Host* - delivers the cumulative, image-based updates for the Atomic Host - the OSTree, as well as updates to the individual RPMs that contain tooling used to build and manage ostrees, and to the OSTree components which enable the use of container applications, for example _cockpit-ostree_ and _openscap_. However, such RPMs cannot be downloaded and used on Red Hat Enterprise Linux.
+
+* *Extras-7* - delivers updates on container-related RPMs, most of which as also available as part of the OSTree for RHEL Atomic Host. The packages marked with an asterisk (*) are only available for Red Hat Enterprise Linux, and are not part of the Atomic Host OSTree. This channel also delivers updates on the official Container Images based on Red Hat Enterprise Linux.
+
+For detailed information on the Red Hat Enterprise Linux Atomic Host cycle, see https://access.redhat.com/support/policy/updates/extras/.
+
+All official Red Hat container images are available from http://registry.access.redhat.com[Red Hat Registry].
+
+To update you RHEL Atomic Host to the latest OSTree, run the *atomic host upgrade* command.
+
+=== Red Hat Enterprise Linux Atomic Host
+
+Red Hat Enterprise Linux Atomic Host is a secure, lightweight, and minimal-footprint operating system optimized to run Linux containers.
+It is pre-installed with the following tools to support Linux containers:
+
+* `docker` - an open source engine that automates the deployment of any application as a lightweight, portable, self-sufficient container that will run virtually anywhere
+* `atomic` - defines the entrypoint for Atomic hosts
+* `kubernetes` - provides container cluster management
+* `etcd` - provides a highly-available key value store for shared configuration
+* `flannel` - contains an etcd-driven address management agent, which manages IP addresses of overlay networks between systems running containers that need to communicate with one another
+
+Red Hat Enterprise Linux Atomic Host makes use of the following technologies:
+
+* `OSTree` and `rpm-OSTree` - These projects provide atomic upgrades and rollback capability
+* `systemd` - a new init system for Linux that enables faster boot times and easier orchestration
+* `SELinux` - enabled by default to provide complete multi-tenant security
+
+Also, *Cockpit* is available on Red Hat Enterprise Linux as a separate Extras package and on Red Hat Enterprise Linux Atomic Host, as the `cockpit-ws` Container Image. Cockpit is a server administration interface that makes it easy to administer Red Hat Enterprise Linux servers through a web browser.
+
+

@@ -1,0 +1,657 @@
+[[overview]]
+=== Overview
+
+Kubernetes reads link:https://access.redhat.com/articles/1460723[YAML]
+files to configure services, pods and replication controllers.
+This document describes the similarities and differences between these
+areas and details the names and expected data types of the various files.
+
+[[design-strategy]]
+=== Design Strategy
+
+Kubernetes uses environment variables whose names are partially specified
+by the service configuration, so normally you would design the services
+first, followed by the pods, followed by the replication controllers.
+This ordering is “outside-in”, moving from the user-facing portion to the
+internal management portion.
+
+Of course, you are free to design the system in any order you wish.
+However, you might find that you require more iterations to arrive at a
+good set of configuration files if you don't start with services.
+
+[[conventions]]
+=== Conventions
+
+In this document, we say *field name* and *field value* instead of *key*
+and *value*, respectively.
+For brevity and consistency with upstream Kubernetes documentation, we say
+*map* instead of *mapping*.
+As the field value can often be a link:#extended-types[complex structure],
+we call the combination of field name and value together a *_<field>_ tree*
+or *_<field>_ structure*, regardless of the complexity of the field value.
+For example, here is a map, with two top-level structures, `one` and `two`:
+
+[source,yaml]
+----
+one:
+  a: [ x, y, z ]
+  b: [ q, r, s ]
+two: 42
+----
+
+The `one` tree is a map with two elements, the `a` tree and the `b` tree,
+while the `two` tree is very simple: field name is `two` and field value
+is 42.
+The field values for both `a` and `b` are lists.
+
+[[extended-types]]
+==== Extended Types
+
+We conceptually extend the YAML type system to include some sub-types of
+`string` and some more precise sub-types of `number`:
+
+`symbol`::
+This is a string that has no internal whitespace, comma, colon,
+curly-braces or square-braces.
+As such, it does not require double-quotes.
+For example, all the field names and the first two values in the following
+map are symbols.
++
+[source,yaml]
+----
+a: one-is-a-lonely-number
+b: "two-s-company"
+c: 3's a crowd
+----
++
+Note that the field value for `b` is a symbol even though it is written
+with double-quotes.
+The double-quotes are unnecessary, but not invalid.
+The other way to think about it is: If you **need** to use double-quotes,
+you are not writing a symbol.
+
+`enum`::
+This is a symbol taken from a pre-specified, finite, set.
+
+`v4addr`::
+This is an IPv4 address in dots-and-numbers notatation (e.g.,
+`127.0.0.1`).
+
+`opt-v4addr`::
+This is either a `v4addr` or the symbol `None`.
+
+`integer`::
+This is a number with neither fractional part nor decimal point.
+
+`resource-quantity`::
+This is a number optionally followed by a scaling suffix.
++
+[cols="1,1,1,3",options="header"]
+|===
+
+|Suffix
+|Scale
+|Example
+|Equivalence
+
+|(none)
+|`1`
+|`19`
+|19 (`19 * 1`)
+
+|`m`
+|`1e-3`
+|`200m`
+|0.2 (`200 * 1e-3`)
+
+|`K`
+|`1e+3`
+|`4K`
+|4000 (`4 * 1e+3`)
+
+|`Ki`
+|`2^10`
+|`4Ki`
+|4096 (`4 * 2^10`)
+
+|`M`
+|`1e+6`
+|`6.5M`
+|6500000 (`6.5 * 1e+6`)
+
+|`Mi`
+|`2^20`
+|`6.5Mi`
+| 6815744 (`6.5 * 2^20`)
+
+|`G`
+|`1e+9`
+|`0.4G`
+|400000000 (`0.4 * 1e+9`)
+
+|`Gi`
+|`2^30`
+|`0.4Gi`
+|429496729 (`0.4 * 2^30`)
+
+|`T`
+|`1e+12`
+|`37T`
+|37000000000000 (`37 * 1e+12`)
+
+|`Ti`
+|`2^40`
+|`37Ti`
+|40681930227712 (`37 * 2^40`)
+
+|`P`
+|`1e+15`
+|`9.8P`
+|9800000000000000 (`9.8 * 1e+15`)
+
+|`Pi`
+|`2^50`
+|`9.8Pi`
+|11033819087057716 (`9.8 * 2^50`)
+
+|`E`
+|`1e+18`
+|`0.42E`
+|420000000000000000 (`0.42 * 1e+18`)
+
+|`Ei`
+|`2^60`
+|`0.42Ei`
+|484227031934875712 (`0.42 * 2^60`)
+|===
++
+Note: The suffix is case-sensitive; `m` and `M` differ.
+
+[[full-name]]
+==== Full Name
+
+The last convention relates to the *_full name_* of a field.
+All field names are symbols.
+At the top-level, the full name of a field is identical to the field name.
+At each sub-level, the full name of a field is the full name of the parent
+structure followed by a “**`.`**” (period, `U+2E`) followed by the name of
+the field.
+
+Here is a map with two top-level items, `one` and `two`:
+
+[source,yaml]
+----
+one:
+  a:
+    x:   9
+    y:   10
+    z:   11
+  b:
+    q:   19
+    r:   20
+    s:   21
+two:     42
+----
+
+The value of `one` is a sub-map, while the value of `two` is a simple
+number.
+The following table shows all the field names and full names.
+
+[cols="1,1,1",options="header"]
+|===
+|Name
+|Full Name
+|Depth
+
+|`one`
+|`one`
+|0 (top-level)
+
+|`two`
+|`two`
+|0
+
+|`a`
+|`one.a`
+|1
+
+|`b`
+|`one.b`
+|1
+
+|`x`
+|`one.a.x`
+|2
+
+|`y`
+|`one.a.y`
+|2
+
+|`z`
+|`one.a.z`
+|2
+
+|`q`
+|`one.b.q`
+|2
+
+|`r`
+|`one.b.r`
+|2
+
+|`s`
+|`one.b.s`
+|2
+
+|===
+
+[[common-structures]]
+=== Common Structures
+
+All configuration files are maps at the top-level, with a few required
+fields and a series of optional ones.
+In most cases field values are basic data elements, but sometimes the
+value is a list or a sub-map.
+In a map, the order does not matter, although it is traditional to place
+the required fields first.
+
+[[top-level]]
+==== Top-Level
+
+The top-level fields are `kind`, `apiVersion`, `metadata`, and `spec`.
+
+`kind` (enum, one of: `Service`, `Pod`, `ReplicationController`)::
+This specifies what the configuration file is trying to configure.
+Although Kubernetes can usually infer `kind` from context, the slight
+redundancy of specifying it in the configuration file ensures that type
+errors are caught early.
+
+`apiVersion` (enum)::
+This specifies which version of the API is used in the configuration file.
+In this document all examples use `apiVersion: v1`.
+
+`metadata` (map)::
+This is a top-level field for Service, Pod and ReplicationController files
+and additionally found as a member of the ReplicationController's
+`template` map.
+Common sub-fields (all optional unless otherwise indicated) are:
++
+[cols="1,1,3",options="header"]
+|===
+|Field
+|Type
+|Comment
+
+|`name`
+|symbol
+|Required
+
+|`namespace`
+|symbol
+|Default is `default`
+
+|`labels`
+|map
+|See individual types
+|===
++
+Strictly speaking, `metadata` is optional.
+However, we recommend including it along with the others, anyway, because
+`name` and `labels` facilitate later manipulation of the Service, Pod or
+ReplicationController.
+
+`spec` (map)::
+This field is the subject of the rest of this document.
+
+[[elsewhere]]
+==== Elsewhere
+
+The other fields described in this section are common, in the sense of
+being found in more than one context, but not at top-level.
+
+`labels` (map)::
+This is often one of the fields in the `metadata` map.
+Valid *label keys* have two segements:
++
+----
+[prefix/]name
+----
++
+The `prefix` and “**`/`**” (slash, `U+2F`) portions are optional.
+The `name` portion is required and must be 1-63 characters in length.
+It must begin and end with with an alphanumeric character (i.e.,
+`[0-9A-Za-z]`).
+The internal characters of `name` may include hyphen, dot and underscore.
+Here are some label keys, valid and invalid:
++
+[cols="2,1,1,2",options="header"]
+|===
+|Label Keys
+|Prefix
+|Name
+|Comments
+
+|`prefix/name`
+|`prefix`
+|`name`
+|
+
+|`just-a-name`
+|(n/a)
+|`just-a-name`
+|
+
+|`-simply-wrong!`
+|(n/a)
+|(n/a)
+|beg and end not alphanumeric
+
+|`example.org/service`
+|`example.org`
+|`service`
+| looks like a domain!
+|===
++
+In the following example, `labels` and `name` comprise the map value of
+field `metadata` and the map value of `labels` has only one key/value
+pair.
++
+[source,yaml]
+----
+metadata:
+  labels:
+    name: rabbitmq
+  name: rabbitmq-controller
+----
++
+Note that in this example `metadata.labels.name` and `metadata.name` differ.
+
+`selector` (map)::
+This is often one of the fields in the `spec` map of a Service or
+ReplicationController, but is also found at top-level.
+The map specifies field names and values that must match in order for the
+configured object to receive traffic.
+For example, the following fragment matches the `labels` example above.
++
+[source,yaml]
+----
+spec:
+  selector:
+    name: rabbitmq
+----
+
+`protocol` (enum, one of: `TCP`, `UDP`)::
+This specifies an IP protocol.
+
+`port` (integer)::
+The field value is the TCP/UDP port where the service, pod or replication
+controller can be contacted for administration and control purposes.
+Similar fields are `containerPort`, `hostPort` and `targetPort`.
+Often, `port` is found in the same map with `name` and `protocol`.
+For example, here is a fragment that shows a list of two such maps as the
+value for field `ports`:
++
+[source,yaml]
+----
+ports:
+- name: dns
+  port: 53
+  protocol: UDP
+- name: dns-tcp
+  port: 53
+  protocol: TCP
+----
++
+In this example, the `port` in both maps is identical, while the `name` and `protocol` differ.
+
+`limits` (map)::
+The field value is a sub-map associating resource types with
+resource-quantity values.
+For `limits` the quantities describe maximum allowable values.
+A similar field is `request`, which describes desired values.
++
+Valid resource types are `cpu` and `memory`.
+The units for `cpu` are Kubernetes Compute Unit seconds/second (i.e., CPU
+cores normalized to a canonical "Kubernetes CPU").
+The units for `memory` are bytes.
++
+In the following fragment, `cpu` is limited to 0.1 KCU and `memory` to 2GiB.
++
+[source,yaml]
+----
+resources:
+  limits:
+    cpu: 100m
+    memory: 2Gi
+----
++
+As shown here, the `limits` field is often found as part of the map value
+for the `resources` field.
+
+[[specific-structures]]
+=== Specific Structures
+
+The following subsections list fields found in the various configuration
+files apart from those in link:#common-structures[Common Structures].
+A field value's type is either one of the elemental data types, including
+those listed in link:#conventions[Conventions], *map* or *list*.
+Each subsection also discusses pitfalls for that particular file.
+
+[[service]]
+==== Service
+
+At the most basic level, Kubernetes can be configured with one Service
+YAML and one Pod YAML.
+In the service YAML, the link:#common-structures[required field] `kind`
+has value `Service`.
+The `spec` tree should include `ports`, and optionally, `selector` and
+`type`.
+The value of `type` is an enum, one of: `ClusterIP` (the default if `type`
+is unspecified), `NodePort`, `LoadBalancer`.
+
+Here is an example of a basic Service YAML:
+
+[source,yaml]
+----
+kind: Service
+apiVersion: v1
+metadata:
+  name: blog
+spec:
+  ports:
+    - containerPort: 4567
+      targetPort: 80
+  selector:
+    name: blog
+  type: LoadBalancer
+----
+
+Note that `name: blog` is indented by two columns to signify it being part
+of the sub-map value of both `metadata` and `selector` trees.
+
+[WARNING]
+Omitting the indentation of `metadata.name` places `name` at top-level and
+gives `metadata` a `nil` value.
+
+Each container's port 4567 is visible externally as port 80, and they
+are accessed in a round-robin manner because of `type: LoadBalancer'.
+
+[[pod]]
+==== Pod
+
+In the pod YAML, the link:#common-structures[required field] `kind` has
+value `Pod`.
+The `spec` tree should include `containers` and optionally `volumes` fields.
+Their values are both a list of maps.
+Each element of `containers` specifies an `image`, with a `name` and other
+fields that describe how the image is to be run (e.g., `privileged`, `resources`),
+what ports it exposes, and what volume mounts it requires.
+Each element of `volumes` specfies a `hostPath`, with a `name`.
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Pod
+metadata:
+  name: host-test
+spec:
+  containers:
+    - image: nginx
+      name: host-test
+      privileged: false
+      volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: srv
+          readOnly: false
+  volumes:
+    - hostPath:
+        path: /srv/my-data
+      name: srv
+----
+
+This example specifies the webserver `nginx` to be run unprivileged and
+with access to the host directory `/srv/my-data` visible internally as
+`/usr/share/nginx/html`.
+
+
+[[replication-controller]]
+==== Replication Controller
+
+In the replication controller YAML, the link:#common-structures[required
+field] `kind` has value `ReplicationController`.
+The `spec.replicas` field specifies how the pod should be *_horizontally scaled_*,
+that is, how many copies of a pod should be active simultaneously.
+The `spec` tree also has a `template` tree, which in turn has a sub-`spec`
+tree that resembles the `spec` tree from a `Pod` YAML.
+
+====
+[source,yaml]
+----
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: my-nginx
+spec:
+  replicas: 3              //<1>
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:                  //<2>
+      volumes:
+      - name: secret-volume
+        secret:
+          secretName: nginxsecret
+      containers:
+      - name: nginxhttps
+        image: bprashanth/nginxhttps:1.0
+        ports:
+        - containerPort: 443
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /etc/nginx/ssl
+          name: secret-volume
+----
+<1> Kubernetes will try to maintain three active copies.
+<2> This sub-`spec` tree is essentially a Pod `spec` tree.
+====
+
+[[field-reference]]
+=== Field Reference
+
+The following table lists all fields found the files, apart from those in
+link:#common-structures[Common Structures].
+A field value's type is either one of the elemental data types (including
+those listed in link:#conventions[Conventions]), map, or list.
+For the *Context* column, the code is `s` for services, `p` for pods, `r`
+for replication controllers.
+
+[cols="2,1,1,3",options="header"]
+|===
+|Field
+|Type
+|Context
+|Example / Comment
+
+|`desiredState`
+| map
+|
+|
+
+|`clusterIP`
+|`opt-v4addr`
+| s
+| `10.254.100.50`
+
+|`selector`
+| map
+| s
+| one element, key `name`
+
+|`replicas`
+|`integer`
+| r
+| `2`
+
+|`replicaSelector`
+| map
+| r
+| one field: `selectorname`
+
+|`podTemplate`
+| map
+| r
+| two fields: `desiredState`, `labels`
+
+|`manifest`
+| map
+| r
+|
+
+|`version`
+|`string`
+| r
+| like `apiVersion`
+
+|`containers`
+| map
+| pr
+|
+
+|`image`
+| string
+| pr
+|
+
+|`selectorname`
+| string
+| r
+|
+
+|`deprecatedPublicIPs`
+| list
+| s
+| each element is an v4addr
+
+|`privileged`
+| boolean
+| pr
+|
+
+|`resources`
+| map
+| pr
+|
+
+|`imagePullPolicy`
+| enum
+| pr
+| `Always`, `Never`, `IfNotPresent`
+
+|`command`
+| list of strings
+| pr
+| for `docker run`
+|===
+
+// kube_config.adoc ends here

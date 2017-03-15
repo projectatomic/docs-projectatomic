@@ -1,0 +1,19 @@
+Red Hat Enterprise Linux Atomic Host is configured in a manner similar to Red Hat Enterprise Linux 7, using the configuration files in the */etc/* directory. Red Hat Enterprise Linux Atomic Host is a minimal server product without a desktop. This means that the graphical configuration tools found in the GUI are not available.
+
+=== Managing User Accounts
+
+Currently, some system users that in Red Hat Enterprise Linux 7 would be listed in the */etc/passwd* file have been relocated into the read-only */usr/lib/passwd* file. Because applications on Red Hat Enterprise Linux Atomic Host are run inside of Linux containers, this will not affect deployment. The traditional user management tools, such as *useradd*, will write locally added users to the */etc/passwd* file as expected.
+
+=== Configuring Networking
+
+If you did not configure networking during the installation you may configure it post-installation using the _nmcli_ tool. The following commands create a network connection called *atomic*, set up a host name and then activate that connection.
+
+....
+# nmcli con add type ethernet con-name atomic ifname eth0
+# nmcli con modify atomic ipv4.dhcp-hostname atomic ipv6.dhcp-hostname atomic
+# nmcli con up atomic
+....
+
+For more details on how to use the _nmcli_ tool, see https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Networking_Guide/sec-Using_the_NetworkManager_Command_Line_Tool_nmcli.html#sec-Connecting_to_a_Network_Using_nmcli[Section 2.3.2. Connecting to a Network Using nmcli] in the Red Hat Enterprise Linux 7 Networking Guide.
+
+For more information on configuring Red Hat Enterprise Linux 7, see the https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/System_Administrators_Guide/index.html[Red Hat Enterprise Linux 7 System Administrator's Guide].

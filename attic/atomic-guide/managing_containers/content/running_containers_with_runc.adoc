@@ -1,0 +1,173 @@
+=== Overview
+While containers supported by Red Hat are themselves in Docker format (and compatible with Open Container Format), the docker command and the docker daemon are not necessarily needed to run those container images or provide other container services. Red Hat includes other tools in RHEL that can be used instead of the docker command and daemon that allow you to run and work with containers.
+
+This chapter describes the following tools that you can use instead of the docker command and daemon to work with Open Container Format and docker-formatted containers:
+
+* **runc**: The runc command can be used to start up a docker-formatted container image (more specifically, an Open Container Format image). 
+* **skopeo**: The skopeo command lets you inspect images from container image registries, get images and image layers, and use signatures to create and verify files.
+
+**IMPORTANT**: The skopeo version currently shipped with RHEL and Atomic Host only works with v2 registries and not the v1 registries Red Hat is currently using.
+
+The following sections decribe runc and skopeo.
+
+=== Running containers with runc
+
+"runC" is a lightweight, portable implementation of the the Open Container Format (OCF) that provides container runtime. runC unites a lot of the  low-level features that make running containers possible. It shares a  lot of low-level code with Docker but it is not dependent on any of the components of the Docker platform. It supports Linux namespaces, live migration, and has portable performance profiles. It also provides full support for Linux security features such as SELinux, control groups (cgroups), seccomp, and others. You can build and run images with runc, or you can run docker-formatted images with runc.
+
+==== Installing and running containers
+
+The runc package is available for Red Hat Enterprise Linux in the Extras channel. You need to have the Extras channel enabled to install it with yum. If you are using Red Hat Enterprise Linux Atomic Host, the runc package is already included. For a regular RHEL system, to enable the extras repository and install the package, run:
+
+....
+$ sudo subscription-manager repos --enable=rhel-7-server-extras-rpms
+$ sudo yum install runc
+....
+
+With runc, containers are configured using bundles. A bundle for a container is a directory that includes a specification file named "config.json" and a root file system. The root file system contains the contents of the container.
+
+To create a bundle:
+
+....
+$ runc spec
+....
+
+This command creates a config.json file that only contains a bare-bones structure that you will need to edit. Most importantly, you will need to change the "args" parameter to call a container. By default, "args" is set to "sh".
+
+....
+    "args": [
+      "sh"
+    ],
+....
+
+As an example, you can download the docker-formatted Red Hat Enterprise Linux Atomic Tools Container Image using docker, then export it, create a new bundle for it with runc, and edit the "config.json" file to point to that image. You can then run an instance of that image with runc. Use the following commands:
+
+....
+$ sudo docker pull rhel7/rhel
+$ sudo docker export $(docker create rhel7/rhel) > rhel.tar
+$ mkdir rootfs
+$ tar -C rootfs -xf rhel.tar
+$ runc spec
+$ sudo runc start rhel-container
+sh-4.2#
+....
+
+In this example, the name of the container instance is "rhel-container". Running that container, by default, starts a shell, so you can being looking around and running commands from inside that container. Type **exit** when you are done.
+
+The name of a container instance must be unique on the host.
+To start a new instance of a container:
+
+....
+# runc start <container_name>
+....
+
+You can provide the bundle directory using the "-b" option. By default, the value for the bundle is the current directory.
+
+You will need root privileges to start containers with runc. To see all commands available to runc and their usage, run "runc --help".
+
+=== Using skopeo to work with container registries
+With the skopeo command, you can work with container images from registries without using the docker daemon or the docker command. Registries can include the Docker Hub, your own local registries, or Atomic registries. Activities you can do with skopeo include:
+
+* **inspect**: The output of a **skopeo inspect** command is similar to what you see from a **docker inspect** command: low-level information about the container image. That output can be in json format (default) or raw format (using the --raw option).
+
+* **copy**: With **skopeo copy** you can copy a container image from a registry to another registry or to a local directory.
+
+* **layers**: The **skopeo layers** command lets you download the layers associated with images so that they are stored as tarballs and associated manifest files in a local directory.
+
+To try out skopeo, you could set up a local registry, then run the commands that follow to inspect, copy, and download image layers. If you want to follow along with the examples, start by doing the following:
+
+* Install a local registry as described in https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-with-containers/#working_with_docker_registries[Working with Docker Registries].
+
+* Pull the latest RHEL 7 image to your local system (**docker pull rhel7/rhel**).
+
+* Retag the RHEL 7 image and push it to your local registry as follows:
+
++
+....
+$ sudo docker tag rhel7/rhel localhost:5000/myrhel7
+$ sudo docker push localhost:5000/myrhel7
+....
+
+The rest of this section describes how to inspect, copy and get layers from the RHEL 7 image.
+
+==== Inspecting container images with skopeo
+When you inspect a container image from a registry, you need to identify the container format (such as docker), the location of the registry (such as docker.io or localhost:5000), and the repository/image (such as rhel7/rhel). 
+
+The following example inspects the mariadb container image from the Docker Hub:
+
+....
+$ sudo skopeo inspect docker://docker.io/library/mariadb
+{
+    "Name": "docker.io/library/mariadb",
+    "Tag": "latest",
+    "Digest": "sha256:d3f56b143b62690b400ef42e876e628eb5e488d2d0d2a35d6438a4aa841d89c4",
+    "RepoTags": [
+        "10.0.15",
+        "10.0.16",
+        "10.0.17",
+        "10.0.19",
+...
+    "Created": "2016-06-10T01:53:48.812217692Z",
+    "DockerVersion": "1.10.3",
+    "Labels": {},
+    "Architecture": "amd64",
+    "Os": "linux",
+    "Layers": [
+...
+....
+
+Assuming you pushed a container image tagged **localhost:5000/myrhel7** to a docker registry running on your local system, the following command inspects that image:
+
+....
+$ sudo skopeo inspect docker://localhost:5000/myrhel7
+{
+    "Name": "localhost:5000/myrhel7",
+    "Tag": "latest",
+    "Digest": "sha256:4e09c308a9ddf56c0ff6e321d135136eb04152456f73786a16166ce7cba7c904",
+    "RepoTags": [
+        "latest"
+    ],
+    "Created": "2016-06-16T17:27:13Z",
+    "DockerVersion": "1.7.0",
+    "Labels": {
+        "Architecture": "x86_64",
+        "Authoritative_Registry": "registry.access.redhat.com",
+        "BZComponent": "rhel-server-docker",
+        "Build_Host": "rcm-img01.build.eng.bos.redhat.com",
+        "Name": "rhel7/rhel",
+        "Release": "75",
+        "Vendor": "Red Hat, Inc.",
+        "Version": "7.2"
+    },
+    "Architecture": "amd64",
+    "Os": "linux",
+    "Layers": [
+        "sha256:16dc1f96e3a1bb628be2e00518fec2bb97bd5933859de592a00e2eb7774b6ecf"
+    ]
+}
+....
+
+==== Copying container images with skopeo
+
+This command copies the myrhel7 container image from a local registry into a directory on the local system:
+....
+# skopeo copy docker://localhost:5000/myrhel7 dir:/root/test/
+INFO[0000] Downloading myrhel7/blobs/sha256:16dc1f96e3a1bb628be2e00518fec2bb97bd5933859de592a00e2eb7774b6ecf 
+# ls /root/test
+16dc1f96e3a1bb628be2e00518fec2bb97bd5933859de592a00e2eb7774b6ecf.tar manifest.json
+....
+
+The result of the **skopeo copy** command is a tarball (16d*.tar) and a manifest.jason file representing the image begin copied to the directory you identified. If there were multiple layers, there would be multiple tarballs. The **skopeo copy** command can also copy images to another registry. If you need to provide a signature to write to the destination registry, you can do that by adding a **--sign-by=** option to the command line, followed by the required key-id.
+
+==== Getting image layers with skopeo
+The **skopeo layers** command is similar to **skopeo copy**, with the difference being that the **copy** option can copy an image to another registry or to a local directory, while the **layers** option just drops the layers (tarballs and manifest.jason file) in the current directory. For example
+
+....
+# skopeo layers docker://localhost:5000/myrhel7 
+INFO[0000] Downloading myrhel7/blobs/sha256:16dc1f96e3a1bb628be2e00518fec2bb97bd5933859de592a00e2eb7774b6ecf 
+# find .
+./layers-myrhel7-latest-698503105
+./layers-myrhel7-latest-698503105/manifest.json
+./layers-myrhel7-latest-698503105/16dc1f96e3a1bb628be2e00518fec2bb97bd5933859de592a00e2eb7774b6ecf.tar
+....
+
+As you can see from this example, a new directory is created (layers-myrhel7-latest-698503105) and, in this case, a single layer tarball and a manifest.json file are copied to that directory.

@@ -1,0 +1,78 @@
+=== Atomic Host
+
+*OStree update*:
+
+New Tree Version: 7.2.6 (hash: b672bf8a457cb28e003dee20c53749636ef5fce3e4743afe4aaad269d3aaa62a) +
+Changes since Tree Version 7.2.5 (hash: 9bfe1fb65094d43e420490196de0e9aea26b3923f1c18ead557460b83356f058)
+
+*Updated packages*:
+
+* glib2-2.46.2-3.el7
+* cockpit-ostree-0.114-2.el7
+* libsolv-0.6.20-5.el7
+* ostree-2016.7-2.atomic.el7
+* rpm-ostree-client-2016.5-1.atomic.el7
+* rpm-ostree-2016.5-1.atomic.el7
+
+=== Extras
+
+*Updated packages*:
+
+* atomic-1.10.5-7.el7
+* cockpit-0.114-2.el7
+* docker-1.10.3-46.el7.10
+* docker-latest-1.10.3-46.el7.10
+* docker-distribution-2.4.1-2.el7 *
+* etcd-2.3.7-2.el7
+* kubernetes-1.2.0-0.13.gitec7364b.el7
+* runc-0.1.1-5.el7 (Technology Preview) *
+* storaged-2.5.2-2.el7 *
+
+*New packages*:
+
+* oci-systemd-hook-0.1.4-4.git41491a3.el7
+* oci-register-machine-0-1.7.git31bbcd2.el7
+* skopeo-0.1.13-8.el7 (Technology Preview)
+
+The asterisk (*) marks packages which are available for Red Hat Enterprise Linux only.
+
+==== Container Images
+
+*Updated*:
+
+*	Red Hat Enterprise Linux Container Image (rhel7/rhel)
+*	Red Hat Enterprise Linux Atomic Tools Container Image (rhel7/rhel-tools)
+*	Red Hat Enterprise Linux Atomic rsyslog Container Image (rhel7/rsyslog)
+*	Red Hat Enterprise Linux Atomic sadc Container Image (rhel7/sadc)
+*	Red Hat Enterprise Linux Atomic cockpit-ws Container Image (rhel7/cockpit-ws)
+*	Red Hat Enterprise Linux Atomic etcd Container Image (rhel7/etcd)
+*	Red Hat Enterprise Linux Atomic Kubernetes-controller Container Image (rhel7/kubernetes-controller-mgr)
+*	Red Hat Enterprise Linux Atomic Kubernetes-apiserver Container Image (rhel7/kubernetes-apiserver)
+*	Red Hat Enterprise Linux Atomic Kubernetes-scheduler Container Image (rhel7/kubernetes-scheduler)
+*	Red Hat Enterprise Linux Atomic SSSD Container Image (rhel7/sssd) (Technology Preview)
+* Red Hat Enterprise Linux Atomic openscap Container Image (rhel7/openscap) (Technology Preview)
+
+=== New Features
+
+* *Containerized core Kubernetes master services coming in 7.3 release*
++
+The Red Hat Enterprise Linux Atomic Host build will be further optimized for size and improved flexibility of Kubernetes version management starting with the 7.3 release. The core Kubernetes masters services (_kube-apiserver_, _kube-controller-manager_ and _kube-scheduler_) will be installed as containers after Atomic Host is booted. Instructions on migrating to a containerized Kubernetes are available link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-with-containers/#creating_a_kubernetes_cluster_to_run_docker_formatted_container_images[here] and users should prepare for this in advance.
+
+* *Cockpit has been rebased to version 0.114*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1353765
++
+Most notable changes:
++
+** The protocol of cockpit-bridge and Cockpit's javascript API is now stable. Plugins written against the javascript API should not experience changes from this point on.
+** Red Hat subscriptions can now specify activation keys and organization.
+** SSH Host keys are now shown on the system page.
+** tuned is now disabled correctly when clearing a performance profile.
+** Improved password score error messages are now displayed.
+** An erroneous docker dependency has been removed from the cockpit package.
+** Network configuration of the Ethernet Maximum Transmission Unit (MTU) is now available.
+** The "active-backup" mode is now used as the default for new network bonds.
+** Network interfaces where NM_CONTROLLED=no is set are no longer displayed.
+** The network on/off switch for unknown or unmanaged interfaces is now disabled.
++
+The packages also include numerous other bug fixes and admin interface improvements.

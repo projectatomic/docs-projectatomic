@@ -1,0 +1,67 @@
+=== Atomic Host
+
+The *atomic* command-line tool can be used to check the status of your Atomic Host system, perform upgrades and rollbacks or deploy a specific operating system tree.
+
+Use *atomic host status* to list the operating system trees downloaded on your system and check which version you are currently running. The asterisk (`*`) marks the currently running tree.
+
+....
+# atomic host status
+State: idle
+Deployments:
+* rhel-atomic-host-ostree:rhel-atomic-host/7/x86_64/standard
+       Version: 7.3 (2016-09-27 17:53:07)
+    BaseCommit: d3fa3283db8c5ee656f78dcfc0fcffe6cd5aa06596dac6ec5e436352208a59cb
+        Commit: f5e639ce8186386d74e2558e6a34f55a427d8f59412d47a907793e046875d8dd
+        OSName: rhel-atomic-host
+
+  rhel-atomic-host-ostree:rhel-atomic-host/7.2/x86_64/standard
+       Version: 7.2.7 (2016-09-15 22:28:54)
+    BaseCommit: dbbc8e805f0003d8e55658dc220f1fe1397caf80221cc050eeb1bbf44bef56a1
+        Commit: 5cd426fa86bd1652ecd8f7d489f89f13ecb7d36e66003b0d7669721cb79545a8
+        OSName: rhel-atomic-host
+....
+
+To upgrade your system, use *atomic host upgrade*. This command will download the latest ostree available and will deploy it after you reboot the system. When you upgrade again, the newly downloaded ostree will replace the oldest one. Upgrading can take a few minutes.
+
+....
+# atomic host upgrade
+# systemctl reboot
+....
+
+To switch back to the other downloaded tree on your system, use *atomic host rollback*. This command is particularly useful when there is a problem after upgrade (for example the new packages break a service that you've configured) because it lets you quickly switch back to the previous state. You can use the `-r` option to initiate a reboot immediately:
+
+....
+# atomic host rollback -r
+....
+
+To deploy a specific version of an ostree, use *atomic host deploy*. You can specify a version or a commit ID if you know it.
+
+....
+# atomic host deploy <version/commit ID>
+....
+
+Use the `--preview` option to check the package difference between the specified version and your currently running tree.
+
+....
+# atomic host deploy 7.3 --preview
+....
+
+For finer tasks you can use the *ostree* tool to manage you Atomic Host. For example, if you are unsure about the version numbering of the trees, you can use the following commands to fetch the ostree logs and list the versions available:
+
+....
+# ostree pull --commit-metadata-only --depth -1 rhel-atomic-host-ostree:rhel-atomic-host/7/x86_64/standard
+# ostree log rhel-atomic-host/7/x86_64/standard
+....
+
+You can delete an ostree you have downloaded with the following commands:
+
+....
+# ostree admin undeploy <0/1>
+# ostree admin cleanup'
+....
+
+Where `0` is the first deployment from the output of *atomic host status*, and `1` is the second one.
+
+Both the `atomic` and `ostree` tools have built-in detailed `--help` options, to check all commands available on the system, use `atomic host --help` or `ostree --help`.
+
+

@@ -1,0 +1,68 @@
+=== Atomic Host
+
+*OStree update*:
+
+New Tree Version: 7.2.2 (hash: a9036292783ddfd389459d9bab69df5a655a0d6bb4dc6239a0aeff0f5d356f2e)
+
+=== Extras
+
+*Updated packages*:
+
+* atomic-1.8-6.git1bc3814.el7
+* cockpit-0.93-1.el7
+* docker-1.8.2-10.el7
+* docker-distribution-2.2.1-1.el7 *
+* etcd-2.2.2-5.el7
+* flannel-0.5.3-9.el7
+* kubernetes-1.2.0-0.6.alpha1.git8632732.el7
+* python-docker-py-1.6.0-1.el7
+
+The asterisk (*) marks packages which are available for Red Hat Enterprise Linux only.
+
+==== Container Images
+
+*Updated*:
+
+*	Red Hat Enterprise Linux Container Image (rhel7/rhel)
+*	Red Hat Enterprise Linux Atomic Tools Container Image (rhel7/rhel-tools)
+*	Red Hat Enterprise Linux Atomic rsyslog Container Image (rhel7/rsyslog)
+*	Red Hat Enterprise Linux Atomic sadc Container Image (rhel7/sadc)
+*	Red Hat Enterprise Linux Atomic cockpit-ws Container Image (rhel7/cockpit-ws)
+*	Red Hat Enterprise Linux Atomic etcd Container Image (rhel7/etcd)
+*	Red Hat Enterprise Linux Atomic Kubernetes-controller Container Image (rhel7/kubernetes-controller-mgr)
+*	Red Hat Enterprise Linux Atomic Kubernetes-apiserver Container Image (rhel7/kubernetes-apiserver)
+*	Red Hat Enterprise Linux Atomic Kubernetes-scheduler Container Image (rhel7/kubernetes-scheduler)
+
+=== New Features
+
+* *The v1beta3 API is no longer supported in kubernetes*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1310806
++
+Using v1beta3 in configuration files is no longer supported. Creating a v1beta3-style object with the kubectl command will fail with the following error:
++
+....
+error validating data: the server could not find the requested resource; if you choose to ignore these errors, turn validation off with --validate=false
+....
++
+Using the *--validate=false* option will create an object, but the object will appear as a v1 object instead.
+
+* *A separate cockpit-docker subpackage is now shipped*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1297797
++
+Previously, the Cockpit docker support was shipped with the _cockpit-shell_ subpackage. Now, the _cockpit-docker_ subpackage is available to be installed separately on Red Hat Enterprise Linux and is included in the OSTree available for RHEL Atomic Host.
+
+* *Cockpit has been rebased to version 0.93*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1292918
++
+Most notable changes:
++
+**  Distribute licenses of included components in the source RPM.
+**  Reworked TLS certificates for Cockpit.
+**  Cockpit now offers to activate multipathd for multipath disks.
+**  Added user interface for OSTree upgrades and rollbacks.
+**  Added OAuth login support.
+**  Add SOS report to the User Interface.
+**  Added support for the Tuned power management tool.

@@ -1,0 +1,169 @@
+==== Overview
+
+The https://github.com/coreos/etcd/[etcd] service provides a highly-available key value store that can be used by applications that need to access and share configuration and service discovery information. Applications that use etcd include http://kubernetes.io/[Kubernetes], https://github.com/coreos/flannel[flannel], https://access.redhat.com/documentation/en/openshift-container-platform/[OpenShift], https://github.com/coreos/fleet[fleet], https://github.com/vulcand/vulcand[vulcand], and https://github.com/coreos/locksmith[locksmith].
+
+The etcd container described here is what is referred to as a system container. A system container is designed to come up before the docker service or in a situation where no docker service is available. In this case, the etcd container can be used to bring up a keystore for the flannel system container, both of which can then be in place to provide networking services before the docker service comes up. 
+
+Prior to RHEL Atomic 7.3.2, there were two containerized versions of the etcd services maintained by Red Hat: etcd 2 (etcd container) and etcd 3 (etcd3 container). With 7.3.2, etcd 2 has been deprecated and etcd 3 is the only supported version of etcd. So the only available etcd container is:
+
+* *etcd*: This is based on etcd version 3.
+
+.Support for etcd
+NOTE: Along with the etcd 3 container, the etcd3 rpm package is also deprecated. Going forward, Red Hat expects to maintain only one version of etcd at a time. For RHEL Atomic 7.3.2, system containers in general and the etcd container specifically in supported as Tech Preview only.
+
+Besides bypassing the docker service, this etcd container can also bypass the docker command and the storage area used to hold docker containers by default. To use the container, you need a combination of commands that include *atomic* (to pull, list, install, delete and unstall the image), *skopeo* (to inspect the image), *runc* (to ultimately run the image) and *systemctl* to manage the image among your other systemd services.
+
+Here are some of the features of the etcd container:
+
+* *Supports atomic pull*: Use the *atomic pull* command to pull the container to your system.
+
+* *Supports atomic install*: Use the *atomic install --system* command to set up the etcd service to run as a systemd service.
+
+* *Configures the etcd service*: When the etcd service starts, a set of ETCD environment variables are exported. Those variables identify the location of the etcd data directory and set the IP addresses and ports the etcd service listens on.
+
+* *System container*: After you have used the *atomic* command to install the etcd container, you can use the systemd *systemctl* command to manage the service.
+
+==== Getting and Running the etcd System Container
+
+To use an etcd system container image on a RHEL Atomic system, you need to pull it, install it and enable it. There identity of the currently supported etcd container is:
+
+    registry.access.redhat.com/rhel7/etcd
+
+The procedure below illustrates how to pull, install, and run the etcd container.
+
+. *Pull the etcd container*: While logged into the RHEL Atomic system, get the etcd container by running the following command:
++
+....
+# atomic pull --storage=ostree registry.access.redhat.com/rhel7/etcd
+Image rhel7/etcd is being pulled to ostree ...
+Pulling layer 2bf01635e2a0f7ed3800c8cb3effc5ff46adc6b9b86f0e80743c956371efe553
+Pulling layer 38bd6ce6e1f2271d48ecb41a70a86122060ea91871a154b37d54ec66f593706f
+Pulling layer 852368668be3e36086ae7a47c8b9e40b5ca87819b3200bc83d7a2f95b73f0f12
+Pulling layer e5d06327f2054d371f725243b619d66982c8d4589c1caa19bfcc23a93cf6b4d2
+Pulling layer 82e7326c732857423e13163ff1e41ad63b3e2bddef8809175f89dec25f58b6ee
+Pulling layer b65a93c9f67115dc4c9da8dfeee63b58ec52c6ea58ff7f727b00d932d1f4e8f5
+....
++
+This pulls the etcd system container from the Red Hat Registry to the ostree storage area on the local system. By setting ostree storage, the docker storage area is not used and the docker daemon and docker command won't see the pulled etcd container image.
+
+. *Install the etcd container*: Type the following to do a default installation of the etcd container so it is set up as a systemd service. 
++
+[NOTE]
+Before running *atomic install*, refer to "Configuring etcd" to see options you could add to the *atomic install* command to change it from the default install shown here.
++
+....
+# atomic install --system rhel7/etcd
+Extracting to /var/lib/containers/atomic/etcd.0
+systemctl daemon-reload
+systemd-tmpfiles --create /etc/tmpfiles.d/etcd.conf
+systemctl enable etcd
+....
+
+. *Start the etcd service*: Use the *systemctl* command to start the installed etcd service as you would any other systemd service.
++
+....
+# systemctl start etcd
+....
++
+. *Check etcd with runc*: To make sure the etcd container is running, you can use the *runc list* command as you would use *docker ps* to see containers running under docker:
++
+....
+# runc list
+ID             PID     STATUS   BUNDLE                    CREATED
+etcd    4521    running  /sysroot/ostree/deploy... 2016-10-25T22:58:13.756410403Z
+....
+
+. *Test that the etcd service is working*: You can use the *curl* command to set and retrieve keys from your etcd service. This example assigns a value to a key called *testkey*, then retrieves that value:
++
+....
+# curl -L http://127.0.0.1:2379/v2/keys/testkey -XPUT -d value="testing my etcd"
+{"action":"set","node":{"key":"/testkey","value":"testing my etcd","modifiedIndex":6,"createdIndex":6}}
+# curl -L http://127.0.0.1:2379/v2/keys/testkey
+{"action":"get","node":{"key":"/testkey","value":"testing my etcd","modifiedIndex":6,"createdIndex":6}}
+....
+
+Note that the first action does a *set* to set the key and the second does a *get* to return the value of the key.
+
+The "Configuring etcd" section shows ways of setting up the etcd service in different ways.
+
+==== Configuring etcd
+
+You can change how the etcd service is configured on the *atomic install* command line or after it is running using the *runc* command.
+
+===== Configuring etcd during "atomic install"
+
+The correct way to configure the etcd container image is when you first run *atomic install*. Setting that are defined initially in the */etc/etcd/etcd.conf* file inside of the container can be overridden on the *atomic install* command line using the *--set* option. For example, this example shows how to reset the value of ETCD_ADVERTISE_CLIENT_URLS value:
+....
+# atomic install --system --set ETCD_ADVERTISE_CLIENT_URLS="http://192.168.122.55:2379" rhel/etcd
+....
+
+Here is the list of other values and setting in the *etcd.conf* file that you can change on the *atomic install* command line. See the link:https://github.com/coreos/etcd/blob/master/etcd.conf.yml.sample[etcd.conf.yaml.sample] page for descriptions of these settings.
+
+....
+# [member]
+ETCD_NAME=default
+ETCD_DATA_DIR="/var/lib/etcd/default.etcd"
+#ETCD_WAL_DIR=""
+#ETCD_SNAPSHOT_COUNT="10000"
+#ETCD_HEARTBEAT_INTERVAL="100"
+#ETCD_ELECTION_TIMEOUT="1000"
+#ETCD_LISTEN_PEER_URLS="http://localhost:2380"
+ETCD_LISTEN_CLIENT_URLS="http://localhost:2379"
+#ETCD_MAX_SNAPSHOTS="5"
+#ETCD_MAX_WALS="5"
+#ETCD_CORS=""
+#[cluster]
+#ETCD_INITIAL_ADVERTISE_PEER_URLS="http://localhost:2380"
+# if you use different ETCD_NAME (e.g. test), set ETCD_INITIAL_CLUSTER value for this name, i.e. "test=http://..."
+#ETCD_INITIAL_CLUSTER="default=http://localhost:2380"
+#ETCD_INITIAL_CLUSTER_STATE="new"
+#ETCD_INITIAL_CLUSTER_TOKEN="etcd-cluster"
+ETCD_ADVERTISE_CLIENT_URLS="http://localhost:2379"
+#ETCD_DISCOVERY=""
+#ETCD_DISCOVERY_SRV=""
+#ETCD_DISCOVERY_FALLBACK="proxy"
+#ETCD_DISCOVERY_PROXY=""
+#ETCD_STRICT_RECONFIG_CHECK="false"
+#[proxy]
+#ETCD_PROXY="off"
+#ETCD_PROXY_FAILURE_WAIT="5000"
+#ETCD_PROXY_REFRESH_INTERVAL="30000"
+#ETCD_PROXY_DIAL_TIMEOUT="1000"
+#ETCD_PROXY_WRITE_TIMEOUT="5000"
+#ETCD_PROXY_READ_TIMEOUT="0"
+#[security]
+#ETCD_CERT_FILE=""
+#ETCD_KEY_FILE=""
+#ETCD_CLIENT_CERT_AUTH="false"
+#ETCD_TRUSTED_CA_FILE=""
+#ETCD_PEER_CERT_FILE=""
+#ETCD_PEER_KEY_FILE=""
+#ETCD_PEER_CLIENT_CERT_AUTH="false"
+#ETCD_PEER_TRUSTED_CA_FILE=""
+#[logging]
+#ETCD_DEBUG="false"
+# examples for -log-package-levels etcdserver=WARNING,security=DEBUG
+#ETCD_LOG_PACKAGE_LEVELS=""
+#[profiling]
+#ETCD_ENABLE_PPROF="false"
+....
+
+===== Configuring etcd with "runc"
+
+With the etcd container running, you can configure settings in the etcd container using the *runc exec* command. For example, you could run the *etcdctl* command inside the etcd container to change the network range set by the Network value in the etcd keystore (used later by the flannel service) with the following command:
+....
+# runc exec etcd etcdctl set /atomic.io/network/config '{"Network":"10.40.0.0/16"}'
+# runc exec etcd etcdctl get /atomic.io/network/config
+{"Network":"10.40.0.0/16"}
+....
+The example just shown illustrates the *runc exec* command running *etcdctl set* at first to set the Network value. After that, runc executes the *etcdctl get* command to get configuration information.
+
+==== Tips for Running etcd Container
+
+If you are done with the etcd container image, you can remove it with the *atomic uninstall* command:
+
+....
+# atomic uninstall etcd
+....
+
+For more information on system containers, see link:http://www.projectatomic.io/blog/2016/09/intro-to-system-containers/[Introduction to System Containers].

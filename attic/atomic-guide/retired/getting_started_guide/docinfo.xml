@@ -1,0 +1,13 @@
+<productname>Red Hat Enterprise Linux Atomic Host</productname>
+<productnumber>7</productnumber>
+<subtitle>Getting Started Guide</subtitle>
+<abstract>
+ <para>Red Hat Getting Started Guide for RHEL Atomic Host</para>
+</abstract>
+<authorgroup>
+  <org>
+    <orgname>Red Hat Atomic Host Documentation Team</orgname>
+    <email>appinfra-docs@redhat.com</email>
+  </org>
+</authorgroup>
+<xi:include href="Common_Content/Legal_Notice.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />

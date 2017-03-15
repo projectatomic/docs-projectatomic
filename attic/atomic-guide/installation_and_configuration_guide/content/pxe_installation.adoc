@@ -1,0 +1,12 @@
+Configuring a PXE server to boot Red Hat Enterprise Linux Atomic Host from it does not differ from the standard procedure for Red Hat Enterprise Linux. You can use the detailed instructions in the, link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Installation_Guide/chap-installation-server-setup.html#sect-network-boot-setup[Preparing for a Network Installation] chapter from the Red Hat Enterprise Linux Installation Guide.
+
+Here is an example entry for Atomic for the `/var/lib/tftpboot/pxelinux/pxelinux.cfg/default` file:
+
+....
+label Atomic-7.3
+  menu label ^1. RHEL Atomic Host 7.3 kickstart
+  kernel atomic7.3/vmlinuz
+  append initrd=atomic7.3/initrd.img inst.stage2=http://192.168.122.1/distros/atomic xdriver=vesa nomodeset quiet ks=http://192.168.122.1/ks/atomic.ks
+....
+
+Make sure the kernel, inird image, installation program runtime image (`inst.stage2`), and the Kickstart file are present in the locations that are specified.

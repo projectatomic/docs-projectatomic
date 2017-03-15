@@ -1,0 +1,10 @@
+Developer Mode provides a way to try out Atomic Host without actually going through an installation. It is available as an option in the GRUB boot menu on cloud images (but not on the bare-metal ISO) and this way you also avoid setting up the _meta-data_ and _user-data_ files and configuring cloud-init.
+
+When your Atomic Host machine boots up, choose the "Developer Mode" selection in the GRUB boot menu to enter Developer Mode.
+
+Developer Mode provides cloud-init with a local data source that automatically provides the following:
+
+* a randomly-generated root password
+* autologin of the root account into a tmux session
+* pulling and starting of the `rhel7/cockpit-ws` container
+

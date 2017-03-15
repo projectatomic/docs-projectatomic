@@ -1,0 +1,568 @@
+=== Overview
+
+Kubernetes is a utility that makes it possible to deploy and manage sets of docker-formatted containers that run applications. This topic explains how to troubleshoot problems that arise when creating and managing Kubernetes pods, replication controllers, services, and containers.
+
+For the purpose of illustrating troubleshooting techniques, this topic uses the containers and configuration deployed
+in the Get Started Orchestrating Containers with Kubernetes chapter.
+Techniques described here should apply to Kubernetes running on Red Hat Enterprise Linux Server and RHEL Atomic Host systems.
+
+=== Understanding Kubernetes Troubleshooting
+
+Before you begin troubleshooting Kubernetes, you should have an understanding of the Kubernetes components being investigated.
+These include:
+
+* *Master*: The system from which you manage your Kubernetes environment.
+* *Nodes*: One or more systems on which containers are deployed by Kubernetes (nodes were previously called minions).
+* *Pods*: A pod defines one or more containers to run, as well as options to the docker run command for each container and labels
+to define the location of services.
+* *Services*: A service allows a container within a Kubernetes environment to find an application provided by another container
+by name (label), without knowing its IP address.
+* *Replication controllers*: A replication controller lets you designate that a certain number of pods should be running.
+(New pods are started until the required number is reached and if a pod dies, a new pod is run to replace it.)
+* *Networking (flanneld)*: The flanneld service lets you configure IP address ranges and related setting to be used by Kubernetes. This feature is optional.
+yaml and json files: The Kubernetes elements we'll work with are actually created from configuration files in yaml or json formats.
+this topic focuses primarily on yaml-formatted files.
+
+You will troubleshoot the components just described using these commands in particular:
+
+* *kubectl*: The *kubectl* command (run from the master) lets you create, delete, get (list information) and perform other
+actions on Kubernetes pods, services and replication controllers.
+You'll use this command to test your yaml/json files, as well as see the state of the different Kubernetes components.
+
+* *systemctl*: Specific *systemd* services must be configured with Kubernetes to facilitate communications between master and nodes.
+Those services must also be active and enabled.
+
+* *journalctl*: You can use the *journalctl* command to check Kubernetes systemd services to follow the processing of those services.
+You can run it on both the master and nodes to check for Kubernetes failures on those systems.
+All daemon logging in kubernetes uses the systemd journal.
+
+* *etcdctl* or *curl*: The *etcd* daemon manages the storage of information for the Kubernetes cluster.
+This service can run on the master or on some other system. You can use the etcdctl command in RHEL or RHEL Atomic Host systems to query that information.
+You also can use the curl command instead to query the etcd service.
+
+=== Preparing Containerized Applications for Kubernetes
+
+Some of the things you should consider before deploying an application to Kubernetes are described below.
+
+==== Networking Constraints
+
+All Applications are not equally kuberizable, because there are limitations on the type of applications that can be run as Kubernetes services.
+In Kubernetes, a service is a load balanced proxy whose IP address is injected into the iptables of clients of that service.
+Therefore, you should verify that the application you intend to "kuberize":
+
+* Can support network address translation or NAT-ing across its subprocesses.
+* Does not require forward and reverse DNS lookup. Kubernetes does not provide forward or reverse DNS lookup to the clients of a service.
+
+If neither of these restrictions apply, or if the user can disable these checks, you can continue on.
+
+==== Preparing your Containers
+
+Depending on the type of software you are running you may wish to take advantage of some predefined environment variables that are provided
+for clients of Kubernetes services.
+
+For example, given a service named *db*, if you launch a Pod in Kubernetes that uses that service, Kubernetes will inject the following
+environment variables into the containers in that pod:
+
+....
+DB_SERVICE_PORT_3306_TCP_PORT=3306
+DB_SERVICE_SERVICE_HOST=10.254.100.1
+DB_SERVICE_PORT_3306_TCP_PROTO=tcp
+DB_SERVICE_PORT_3306_TCP_ADDR=10.254.100.1
+DB_SERVICE_PORT_3306_TCP=tcp://10.254.100.1:3306
+DB_SERVICE_PORT=tcp://10.254.100.1:3306
+DB_SERVICE_SERVICE_PORT=3306
+....
+
+*NOTE*: Notice that the service name (db) is capitalized in the variables (DB).
+If there were dashes (-) in the name, they would be converted to underscores (_).
+
+To see these and other shell variables, use *docker exec* to open a shell to the active container and run *env* to see the shell variables:
+
+....
+# docker exec -it <container_ID> /bin/bash
+[root@e7ea67..]# env
+...
+WEBSERVER_SERVICE_SERVICE_PORT=80
+KUBERNETES_RO_SERVICE_PORT=80
+KUBERNETES_SERVICE_PORT=443
+KUBERNETES_RO_PORT_80_TCP_PORT=80
+KUBERNETES_SERVICE_HOST=10.254.255.128
+DB_SERVICE_PORT_3306_TCP_PORT=3306
+DB_SERVICE_SERVICE_HOST=10.254.100.1
+WEBSERVER_SERVICE_PORT_80_TCP_ADDR=10.254.100.50
+...
+....
+
+When starting your client applications you may want to leverage those variables.
+If you are debugging communications problems between containers, viewing these shell variables is a great way to see each container's view of the
+addresses of services and ports.
+
+=== Debugging Kubernetes
+
+Before you start debugging Kubernetes, it helps to have a high level of understanding of how Kubernetes works.
+When you submit an application to Kubernetes, here's generally what happens:
+
+. Your *kubectl* command line is sent to the kube-apiserver (on the master) where it is validated.
+
+. The kube-scheduler process (on the master) reads your yaml or json file and assigns pods to nodes (nodes are systems running the kubelet service).
+
+. The kublet service (on a node) converts the pod manifest into one or more *docker run* calls.
+
+. The *docker run* command tries to start up the identified containers on available nodes.
+
+So, to debug a kubernetes deployed app, you need to confirm that:
+
+. The Kubernetes service daemon (systemd) processes are running.
+
+. The yaml or json submission is valid.
+
+. The kubelet service is receiving a work order from the kube-scheduler.
+
+. The kubelet service on each node is able to successfully launch each container with docker.
+
+NOTE: The above list is missing the kube-controller-manager which is important if you do things like create a replication controller,
+but you see no pods being managed by it. Or you have registered nodes with the cluster, but you are not getting information about their
+available resources, etc.
+
+Also note, there is a movement upstream to an all-in-one hyperkube binary, so terminology here may need to change in the near future.
+
+==== Inspecting and Debugging Kubernetes
+
+From the Kubernetes master, inspect the running Kubernetes configuration. 
+We'll start by showing you how this configuration should look when everything is working.
+Then we'll show you how to the setup might break in various ways and how you can go about fixing it.
+
+==== Querying the State of Kubernetes
+
+Using *kubectl* is the simplest way to manually debug the process of application submission, service creation, and pod assignment.
+To see what pods, services, and replication controllers are active, run these commands on the master:
+
+....
+# kubectl get pods
+POD             IP          CONTAINER(S)     IMAGE(S)  HOST                LABELS                                         STATUS
+4e04dd3b-c...   10.20.29.3  apache-frontend  webwithdb node2.example.com/  name=webserver,selectorname=webserver,uses=db  Running
+5544eab2-c...   10.20.48.15 apache-frontend  webwithdb node1.example.com/  name=webserver,selectorname=webserver,uses=db  Running
+1c971a09-c...   10.20.29.2  db               dbforweb  node2.example.com   name=db,selectorname=db                        Running
+1c97a755-c...   10.20.48.14 db               dbforweb  node1.example.com/  name=db,selectorname=db                        Running
+# kubectl get services
+NAME               LABELS                                   SELECTOR        IP                  PORT
+webserver-service  name=webserver                           name=webserver  10.254.100.50       80
+db-service         name=db                                  name=db         10.254.100.1        3306
+kubernetes         component=apiserver,provider=kubernetes            10.254.92.19        443
+kubernetes-ro      component=apiserver,provider=kubernetes            10.254.206.141      80
+# kubectl get replicationControllers
+CONTROLLER             CONTAINER(S)        IMAGE(S)            SELECTOR                 REPLICAS
+webserver-controller   apache-frontend     webwithdb           selectorname=webserver   2
+db-controller          db                  dbforweb            selectorname=db          2
+....
+
+Here's information to help you interpret this output:
+
+* Pods are either in Waiting or Running states. The fact that all four pods are running here is a good sign.
+* The replication controller successfully started two apache-frontend and two db containers. They were distributed across node1 and node2.
+* The *uses* label for apache-frontend lets that container find the db container through the db-service Kubernetes service.
+* The services listing identifies the IP address and port number for each service that can be requested from pods by each service's label name.
+* The kubernetes and kubernetes-ro services provide access to the kube-apiserver systemd service.
+
+If something goes wrong in the process of getting to this state, the following sections will help you troubleshoot problems.
+
+=== Troubleshooting Kubernetes systemd Services
+
+Kubernetes is implemented using a set of service daemons that run on Kubernetes masters and nodes.
+If these systemd services are not working properly, you will experience failures.
+Things you should know about avoiding or fixing potential problems with Kubernetes systemd services are described below.
+
+==== Checking that Kubernetes systemd Services are Up
+
+A Kubernetes cluster that consists of a master and one or more nodes (minions) needs to initialize a particular set of systemd services.
+You should verify that the following services are running on the master and on each node:
+
+* *Start Master first*: The services on the master should come before starting the services on the nodes.
+The nodes will not start up properly if the master is not already up.
+
+* *Master services*: Services include: kube-controller-manager, kube-scheduler, flanneld, etcd, and kube-apiserver.
+The flanneld service is optional and it is possible to run the etcd services on another system.
+
+* *Node services*: Services include: docker kube-proxy kubelet flanneld. The flanneld service is optional.
+
+Here's how you verify those services on the master and each node:
+
+*Master*: On your kubernetes master server, this will tell you if the proper services are active and enabled
+(flanneld may not be configured on your system):
+
+....
+# for SERVICES in etcd flanneld kube-apiserver kube-controller-manager kube-scheduler;
+    do echo --- $SERVICES --- ; systemctl is-active $SERVICES ;
+    systemctl is-enabled $SERVICES ; echo "";  done
+--- etcd ---
+active
+enabled
+--- flanneld ---
+active
+enabled
+--- kube-apiserver ---
+active
+enabled
+--- kube-controller-manager ---
+active
+enabled
+--- kube-scheduler ---
+active
+enabled
+....
+
+*Nodes*: On each node, make sure the proper services are active and enabled:
+
+....
+# for SERVICES in flanneld docker kube-proxy.service kubelet.service; \
+do echo --- $SERVICES --- ; systemctl is-active $SERVICES ; \
+systemctl is-enabled $SERVICES ; echo "";  done
+--- flanneld ---
+active
+enabled
+--- docker ---
+active
+enabled
+--- kube-proxy.service ---
+active
+enabled
+--- kubelet.service ---
+active
+enabled
+....
+
+If any of the master or node systemd services are disabled or failed, here's what to do:
+
+* Try to enable or activate the service.
+
+* Check the systemd journal on the system where a service is failing and look for hints on how to fix the problem.
+One way to do that is to use the journalctl with the command representing the service. For example:
++
+....
+# journalctl -l -u kubelet
+# journalctl -l -u kube-apiserver
+....
+
+* If the services still don't start, check that
+each service's configuration file is set up properly.
+
+==== Checking Firewall for Kubernetes
+
+There is no iptables or firewalld service installed on RHEL Atomic Host. So, by default, there are no firewall filter rules blocking access
+to Kubernetes services. However, if you have a firewall running on a RHEL host or if you have added iptables firewall rules to your
+Kubernetes master or nodes to filter incoming ports, you need to make sure that the ports that need to be exposed on those systems are not blocked.
+
+The following is the output of a *netstat* command, showing which ports Kubernetes and related services are listening on a Kubernetes nodes:
+
+....
+# netstat -tupln
+tcp6       0      0 :::10249          :::*          LISTEN      125528/kube-proxy
+tcp6       0      0 :::10250          :::*          LISTEN      125536/kubelet
+....
+
+*NOTE*: The kube-proxy service listens on random ports. This is not a problem on RHEL Atomic systems, since there is on filtering firewall
+service used by default. However, if you add a firewall to RHEL Atomic or use a default RHEL system, you can request that kube-proxy listen
+on specific ports in the service definition and then open those ports in the firewall.
+
+Here is *netstat* output on a Kubernetes master:
+
+....
+tcp        0      0 192.168.122.249:7080  0.0.0.0:* LISTEN   636/kube-apiserver
+tcp6       0      0 :::8080               :::*      LISTEN   636/kube-apiserver
+tcp        0      0 127.0.0.1:10252       0.0.0.0:* LISTEN   7541/kube-controller
+tcp        0      0 127.0.0.1:10251       0.0.0.0:* LISTEN   7590/kube-scheduler
+tcp6       0      0 :::4001               :::*      LISTEN   941/etcd
+tcp6       0      0 :::7001               :::*      LISTEN   941/etcd
+....
+
+
+The output in the third column shows the IP addresses and port number that each service is listening on. (``:::`` represents all interfaces) 
+Open ports to each of those services.
+
+==== Checking Kubernetes yaml or json Files
+
+You set up your Kubernetes environment (pods, services, and replication controllers) by loading information from yaml or json files using the *kubectl create*
+command. Failures can result from those files being improperly formatted or missing needed information.
+
+The following sections contain tips for fixing problems that occur from broken yaml or json files.
+
+===== Troubleshooting Kubernetes Service Creation
+
+A Kubernetes service (created with *kubectl*), attaches an IP address and port to a label. A pod that needs to use that service can refer to that
+service by the label, so it doesn't need to know the IP address and port numbers directly. The following is an example of a service file named
+db-service.yaml, followed by a list of problems that can occur when you try to create a service:
+
+....
+id: "db-service"
+kind: "Service"
+apiVersion: "v1"
+port: 3306
+portalIP: "10.254.100.1"
+selector:
+  name: "db"
+labels:
+  name: "db"
+....
+
+....
+# kubectl create -f db-service
+# kubectl get services
+NAME          LABELS                                  SELECTOR  IP             PORT
+db-service    name=db                                 name=db   10.254.100.1   3306
+kubernetes-ro component=apiserver,provider=kubernetes     10.254.186.33  80
+kubernetes    component=apiserver,provider=kubernetes     10.254.198.9   443
+....
+
+*NOTE*: If you don't see the kubernetes-ro and kubernetes services, try restarting the kube-scheduler systemd service
+(*systemctl restart kube-scheduler.service*).
+
+If you don't see output similar to what was just shown, read the following:
+
+* If the service seemed to create successfully, but the LABELS an SELECTOR were not set, the output might look as follows:
++
+....
+# kubectl get services
+NAME         LABELS     SELECTOR  IP             PORT
+db-service            10.254.100.1   3306
+....
++
+Check that the name: fields under selector: and labels: are each indented two spaces.
+In this case I deleted the two blank spaces before each *name: "db"* line and their values were not used by *kubectl*.
+
+* If you forget that you have already created a Service and try to create it again or if some other service has already allocated
+an IP address you identified in your service yaml, your new attempt to create the service will result in this message:
++
+....
+create.go:75] service "webserver-service" is invalid: spec.portalIP:
+    invalid value '10.254.100.50': IP 10.254.100.50 is already allocated
+....
++
+You can either use a different IP address or stop the service that is currently consuming that port, if you don't need that service.
+
+* The following error noting that the "Service" object isn't registered can occur for a couple of reasons:
++
+....
+7338 create.go:75] unable to recognize "db-service.yaml": no object named "Services" is registered
+....
++
+In the above example, "Service" was misspelled as "Services". If it does correctly say "Service", then check that the apiVersion is correct.
+A similar error occurred when the invalid value "v99" was used as the apiVersion.
+Instead of saying "v99" doesn't exist, it says it can't find the object "Service".
+
+. Here is a list of error messages that occur if any of the fields from the above example is missing:
+
+.. *id: missing*: service "" is invalid: name: required value ''
+.. *kind: missing*: unable to recognize "db-service.yaml": no object named "" is registered
+.. *apiVersion: missing*: service "" is invalid: [name: required value '', spec.port: invalid value '0']
+.. *port: missing*: service "db-service" is invalid: spec.port: invalid value '0'
+.. *portalIP: missing*: No error is reported because portalIP is not required
+.. *selector: missing*: No error is reported, but SELECTOR field is missing and service may not work.
+.. *labels: missing*: Not an error, but LABELS field is missing and service may not work.
+
+===== Troubleshooting Kubernetes Replication Controller and Pod creation
+
+A Kubernetes Pod lets you associate one or more containers together, assign run options to each container, and manage those containers together as a unit.
+A replication controller lets you designate how many of the pods you identify should be running.
+The following is  an example of a yaml file that defines a Web server pod and a replications controller that ensures that two instances of the pod
+are running.
+....
+id: "webserver-controller"
+kind: "ReplicationController"
+apiVersion: "v1"
+metadata:
+  name: "webserver-controller"
+spec:
+  replicas: 1
+  selector:
+    name: "webserver"
+  template:
+    spec:
+      containers:
+        - name: "apache-frontend"
+          image: "webwithdb"
+          ports:
+            - containerPort: 80
+    metadata:
+      labels:
+        name: "webserver"
+        uses: db
+  labels:
+    name: "webserver"
+....
+....
+# kubectl create -f webserver-service.yaml
+# kubectl get pods
+POD         IP          CONTAINER(S)     IMAGE(S)    HOST
+       LABELS                                             STATUS
+f28980d...  10.20.48.4  apache-frontend  webwithdb   node1.example.com/
+       name=webserver,selectorname=webserver,uses=db      Running
+f28a0a8...  10.20.29.9  apache-frontend  webwithdb   node2.example.com/
+       name=webserver,selectorname=webserver,uses=db      Running
+# kubectl get replicationControllers
+CONTROLLER           CONTAINER(S)    IMAGE(S)   SELECTOR               REPLICAS
+
+webserver-controller apache-frontend webwithdb  selectorname=webserver 2
+....
+
+*NOTE*: I truncated the pod name and wrapped the long lines in the output above.
+
+If you don't see output similar to what was just shown, read the following:
+
+* *id: missing*: If a generated set of numbers and letters appears in the CONTROLLER column instead of "webserver-controller",
+your yaml file is probably missing the id line.
+
+* *apiVersion set wrong*: If you see the message "unable to recognize "webserver-rc.yaml": no object named "ReplicationController" is registered",
+you may have an invalid apiVersion value or misspelled ReplicationController.
+
+* *selectorname: missing*: If you see the message "replicationController "webserver-controller" is invalid: spec.selector: required value 'map[]'",
+there is no selectorname set after the replicaSelector line. If the selectorname is not indented properly, you will see a message like,
+ "unable to get type info from "webserver-rc.yaml": couldn't get version/kind: error converting YAML to JSON: yaml: line 7: did not find expected key."
+
+=== Troubleshooting Techniques
+
+If you want to look deeper into what is going on with your Kubernetes cluster, see the following techniques for investigating further.
+
+==== Crawling and fixing the etcd database
+
+The etcd service provides the database that Kubernetes uses to coordinate information across the cluster.
+There are ways to view the database directly and fix problems in it (or clear the database if it is beyond repair).
+
+*Displaying data from the etcd database*: You can query most information you need from the etcd database using kubectl get commands.
+However, if this database seems to be inconsistent with the way you believe your configuration should be, you can directly query the
+etcd database using the etcdctl command.
+
+Use the *etcdctl* command with the ls option to list the directory structure of the database.
+To get values, use the get option. For example, to see the root of the database, type the following:
+....
+# etcdctl ls /
+/registry
+....
+
+To list information associated with the etcd database, type this:
+
+....
+# etcdctl ls /registry/
+
+/registry/namespaces
+/registry/ranges
+/registry/serviceaccounts
+/registry/services
+
+...
+....
+
+To see the data associated with a particular entry, type the following:
+
+....
+# etcdctl get /registry/namespaces/default | python -mjson.tool 
+{
+    "apiVersion": "v1",
+    "kind": "Namespace",
+    "metadata": {
+        "creationTimestamp": "2016-10-24T12:05:11Z",
+        "name": "default",
+        "uid": "1d6efb5f-99e2-11e6-8f4b-525400585a9f"
+    },
+    "spec": {
+        "finalizers": [
+            "kubernetes"
+        ]
+    },
+    "status": {
+        "phase": "Active"
+    }
+}
+....
+
+The output above is piped to a python json.tool formatting module, to make it easier to read.
+
+*NOTE*: Instead of the etcdctl command, you can use the *curl*. For example, to see the root of the database with *curl*,
+use this instead of the *etcdctl ls /* command: *curl -L http://localhost:2379/v2/keys/ | python -mjson.tool*. Use that form of the curl command to display both directory and key values. If you believe that a node is not able to connect to the etcd service on the master, you could use the following *curl* command to test that connection from the node:
+
+....
+# curl -s -L http://localhost:2379/version
+{"etcdserver":"2.3.7","etcdcluster":"2.3.0"}
+....
+
+*Fixing the etcd database*: It is possible to correct problems with your etcd database if information gets out of sync.
+There is are *etcdctl update* and *etcdctl set* commands for changing the contents of a key. However, if you are not careful,
+changing these values can cause more problems than they fix.
+
+However, if your etcd database become completely unuseable, you can clear it and start over again.
+The way to do that is to run the *etcd* daemon with the *-f* option.
+
+*WARNING*: Before you clear the etcd database, try using *kubectl delete* command to try to remove the offending services,
+pods, replicationControllers or minions. If you still feel you need to clear the database, keep in mind that if you do so,
+you need to recreate everything from scratch.
+
+To clear the etcd database, type the following:
+....
+# etcd -f
+....
+
+==== Deleting Kubernetes components
+
+How you stop and delete components in Kubernetes matters. Because Kubernetes is designed to get things to a particular state,
+simply deleting a container or a pod will often just cause another one to be started.
+
+If you do delete components out of order, here's what you can expect:
+
+* *I deleted a pod, but it started up again*: If you don't stop the replication controllers first, the pods will be restarted.
+Stop the replication controllers (*kubectl delete replicationControllers webserver-controller*), then stop the pods.
+
+* *I stopped and deleted a container, but it started up again*: With a Kubernetes cluster, you should not stop a container directly with *docker stop*.
+The replication controller will start a new container to restart the one you stopped.
+
+==== Pods Stuck in the "WAITING" state.
+
+PODS can be stuck in the waiting state for some time period. Here are some possible causes:
+
+* *Pulling the Docker image is taking a while*: To confirm this, you can ssh directly into the minion which the pod is assigned, and run:
++
+....
+# journalctl -f -u docker
+....
++
+This should show logs of docker pulling down your image. Note requests to pull dockerhub images may fail intermittently, but the kubelets will
+continue retrying.
+
+* *PODs are unassigned*: If a pod remains unassigned, confirm that nodes are available to the master by running kubectl get minions.
+It is possible that the node may just be down or otherwise unreachable. Unassigned pods can also result from setting the replication count higher
+then what the cluster can provide.
+
+* *Container Pod dies right after starting*: In some cases, if the Dockerfile you created is not written properly to start a service, or the docker
+CMD operation is failing, you might see the POD immediately dying after it starts. Try testing the container image with a *docker run* command,
+to make sure that the container itself isn't broken.
+
+* *Check output from container*: Messages output from containers can be viewed with the kubectl log command. This can be useful for debugging problems
+with the applications running within the container. Here is how to list available pods and view log messages for the one you want:
++
+....
+# kubectl get pods
+POD                                   IP         CONTAINER(S) IMAGE(S)            HOST                 LABELS                          STATUS
+e1f4b268-e87d-11e4-926b-5254001aa4ee  10.20.24.3 db           dbforweb node1.example.com/   name=db,selectorname=db         Running
+# kubectl log e1f4b268-e87d-11e4-926b-5254001aa4ee
+2015-04-28T16:09:36.953130209Z 150428 12:09:36 mysqld_safe Logging to '/var/log/mariadb/mariadb.log'.
+2015-04-28T16:09:37.137064742Z 150428 12:09:37 mysqld_safe Starting mysqld daemon with databases from /var/lib/mysql
+....
+
+* *Check container output from docker*: Some errors don't percolate all the way up to the kubelet. You can look directly in the docker logs
+for an exited container to observe why this might be happening. Here's how:
+
+. Log into the node that's having trouble running a container
+. Run this command to look for an exited run:
++
+....
+# docker ps -a
+61960bda2927  rhel7/rhel-tools:latest "/usr/bin/bash" 47 hours ago
+      Exited (0) 43 hours ago      myrhel-tools4
+....
+
+. Check all the output from the container with docker logs:
++
+....
+# docker logs 61960bda2927
+....
+
+You should be able to see the entire output from the container session.
+So, for example, if you opened a shell in a container, you will see all the commands you ran from that shell when you run docker logs.

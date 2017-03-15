@@ -1,0 +1,33 @@
+<productname>Red Hat Enterprise Linux Atomic Host</productname>
+<productnumber>7</productnumber>
+<subtitle>REPLACE WITH BOOK NAME</subtitle>
+<abstract>
+ <para>REPLACE WITH WHAT IS THIS BOOK ABOUT</para>
+</abstract>
+<authorgroup>
+  <author>
+    <firstname>Chris</firstname>
+    <surname>Negus</surname>
+    <email>cnegus@redhat.com</email>
+  </author>
+  <author>
+    <firstname>Thien-Thi</firstname>
+    <surname>Nguyen</surname>
+    <email>tnguyen@redhat.com</email>
+  </author>
+  <author>
+    <firstname>Yoana</firstname>
+    <surname>Ruseva</surname>
+    <email>yruseva@redhat.com</email>
+  </author>
+  <author>
+    <firstname>Zac</firstname>
+    <surname>Dover</surname>
+    <email>zdover@redhat.com</email>
+  </author>
+  <org>
+    <orgname>Red Hat Atomic Host Documentation Team</orgname>
+    <email>appinfra-docs@redhat.com</email>
+  </org>
+</authorgroup>
+<xi:include href="Common_Content/Legal_Notice.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />

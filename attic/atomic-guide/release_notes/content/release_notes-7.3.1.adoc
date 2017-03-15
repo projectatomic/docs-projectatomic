@@ -1,0 +1,92 @@
+=== Atomic Host
+
+*OStree update*:
+
+New Tree Version: 7.3.1 (hash: 42cfe1ca3305defb16dfd59cd0be5c539f19ea720dba861ed11e13941423ae86) +
+Changes since Tree Version 7.3 (hash: 90c9735becfff1c55c8586ae0f2c904bc0928f042cd4d016e9e0e2edd16e5e97)
+
+*Updated packages*:
+
+* cockpit-ostree-122-1.el7
+* ostree-2016.11-1.atomic.el7
+* rpm-ostree-2016.11-2.atomic.el7
+* rpm-ostree-client-2016.11-2.atomic.el7
+
+=== Extras
+
+*Updated packages*:
+
+* atomic-1.13.8-1.el7
+* cockpit-122-3.el7
+* docker-1.10.3-59.el7
+* docker-distribution-2.5.1-1.el7
+* docker-latest-1.12.3-2.el7
+* etcd3-3.0.14-2.el7
+* kubernetes-1.3.0-0.3.git86dc49a.el7
+* oci-register-machine-0-1.10.gitfcdbff0.el7
+* oci-systemd-hook-0.1.4-7.gita9c551a.el7
+* skopeo-0.1.17-0.7.git1f655f3.el7
+
+*New packages*:
+
+* gomtree-0-0.3.git8c6b32c.el7
+
+The asterisk (*) marks packages which are available for Red Hat Enterprise Linux only.
+
+==== Container Images
+
+*Updated*:
+
+*	Red Hat Enterprise Linux Container Image (rhel7/rhel)
+*	Red Hat Enterprise Linux Atomic Tools Container Image (rhel7/rhel-tools)
+*	Red Hat Enterprise Linux Atomic rsyslog Container Image (rhel7/rsyslog)
+*	Red Hat Enterprise Linux Atomic sadc Container Image (rhel7/sadc)
+*	Red Hat Enterprise Linux Atomic cockpit-ws Container Image (rhel7/cockpit-ws)
+*	Red Hat Enterprise Linux Atomic etcd Container Image (rhel7/etcd)
+*	Red Hat Enterprise Linux Atomic Kubernetes-controller Container Image (rhel7/kubernetes-controller-mgr)
+*	Red Hat Enterprise Linux Atomic Kubernetes-apiserver Container Image (rhel7/kubernetes-apiserver)
+*	Red Hat Enterprise Linux Atomic Kubernetes-scheduler Container Image (rhel7/kubernetes-scheduler)
+*	Red Hat Enterprise Linux Atomic SSSD Container Image (rhel7/sssd) (Technology Preview)
+* Red Hat Enterprise Linux Atomic openscap Container Image (rhel7/openscap) (Technology Preview)
+
+*New*:
+
+* Red Hat Enterprise Linux Atomic Identity Management Server Container Image (rhel7/ipa-server) (Technology Preview)
+
+
+=== New Features
+
+* *new gomtree package*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=XXXXXX
++
+The gomtree packages contain a command-line tool and a Go library to support the mtree file system hierarchy validation tooling and format. The gomtree packages are necessary for the functionality of the `atomic verify` command.
+
+* *skopeo-containers moved from atomic packages to skopeo packages*
++
+The `skopeo-containers` subpackage which contains configurations files for working with image signatures has now been moved to the skopeo package set.
+
+* *A bug where docker push did not complete on NFS has been fixed*
++
+A regression was introduced in the docker registry 2.4 where file descriptors weren't closed during blob uploads. This has caused image push failures when the registry was running on top of NFS file system. A new version of upstream docker registry is available with a fix to the leaking file descriptors. As a result, image pushes now succeed on NFS file systems.
+
+* *Standardizing labels for Docker-formatted containers"
++
+*Red Hat is trying to standardize the use of Docker-formatted labels in its images. For details on that subject see: link:https://access.redhat.com/articles/2796051[Using Labels In Container Images]
+
+* *Cockpit has been rebased to version 122*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1390273
++
+Most notable changes:
++
+** Cockpit can now rollback network configuration that would otherwise disconnect an administrator from the system.
+** Unmanaged network devices are now shown.
+** The list of docker containers can be filtered and expanded inline.
+** Cockpit can be a "bastion host" by using the login page to connect to an alternate system through SSH.
+** Only connect to an alternate system if it has a known SSH host key.
+** When connecting to other systems, each SSH connection is run in a separate process.
+** Fixes bugs that prevent the "Logs" page from working in Firefox 49.
+** A network proxy can be used when registering with Red Hat Enterprise Linux.
+** A system can be unregistered when using Red Hat Enterprise Linux subscriptions.
+** The default flags for new VLAN devices have been fixed.

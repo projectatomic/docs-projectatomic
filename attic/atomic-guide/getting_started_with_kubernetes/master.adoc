@@ -1,0 +1,20 @@
+= Getting Started with Kubernetes
+:imagesdir: images
+
+== Get Started Orchestrating Containers with Kubernetes
+include::content/get_started_orchestrating_containers_with_kube.adoc[]
+
+== Get Started Provisioning Storage in Kubernetes
+include::content/get_started_provisioning_storage_kube.adoc[]
+
+== Migrating from an Earlier Version of Kubernetes
+include::content/migrating_kubernetes.adoc[]
+
+== Troubleshooting Kubernetes
+include::content/troubleshooting_kube.adoc[]
+
+== YAML in a Nutshell
+include::content/yaml_in_a_nutshell.adoc[]
+
+== Kubernetes Configuration
+include::content/kube_config.adoc[]

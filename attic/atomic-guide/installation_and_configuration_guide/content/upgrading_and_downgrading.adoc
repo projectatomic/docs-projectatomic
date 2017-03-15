@@ -1,0 +1,132 @@
+=== Setting up an Atomic Compose Server
+
+This procedure explains how to set up an Atomic Compose server. It is possible to use an Atomic Compose server to create atomic update trees. The procedure here explains how to set up an Atomic Compose server that creates a local mirror of the upstream OSTree repository.
+
+. Log into a shell on the host, and run the Atomic Tools container.
++
+....
+# atomic run rhel7/rhel-tools
+....
++
+. From inside the tools container, create an unprivileged user.
++
+....
+# adduser container
+....
++
+. Acquire the entitlement certificates and use `chown` to make them owned by the unprivileged container user.
++
+....
+# cd ~container
+# cp /host/etc/pki/entitlement/*.pem .
+# chown container: *.pem
+# runuser -u container bash
+....
++
+. Log out of the root account.
++
+....
+# exit
+....
++
+[NOTE]
+We use **/host/var/tmp/repo** so the data is outside of the container. This could be a remote mount point to Ceph/etc.
++
+. Put the entitlement certificates inside the repo directory.
++
+....
+$ cd /host/var/tmp
+$ mkdir repo && ostree --repo=repo init --mode=archive-z2
+$ mv ~/*.pem repo/
+....
++
+. Copy the remote configuration from the host into the repository:
++
+....
+$ cat /host/etc/ostree/remotes.d/redhat.conf >> repo/config
+....
+. Change variables
++
+Edit **repo/config** and change the **tls-client-* ** variables to look like the ones below. This tells the command where to find the client certificates that are necessary to access the CDN.
++
+....
+tls-client-cert-path = ./repo/123451234512345.pem
+tls-client-key-path = ./repo/123451234512345-key.pem
+....
++
+. Final steps
++
+Everything is now set up. The following command will incrementally mirror all of the content. It is possible to run the command from a cron job or systemd timer.
++
+....
+$ ostree --repo=repo pull --mirror rhel-atomic-host-ostree
+....
++
+For client machines, change **/etc/ostree/remotes.d/redhat.conf** to point to a static web server that is exporting the repo directory.
+
+=== Upgrading to a New Version
+
+Unlike Red Hat Enterprise Linux 7 which uses _Yum_ and has a traditional package management model, RHEL Atomic Host uses OSTree and is upgraded by preparing a new operating system root, and making it the default for the next boot.
+
+To perform an upgrade, execute the following commands:
+
+....
+# atomic host upgrade
+# systemctl reboot
+....
+
+If you are using a system that requires an HTTP proxy, the proxy is configured with an environment variable. To configure the environment variable, use a command similar to the following one:
+
+....
+# env http_proxy=http://proxy.example.com:port/ atomic host upgrade
+....
+
+=== Rolling Back to a Previous Version
+
+To revert to a previous installation of Red Hat Enterprise Linux Atomic Host, execute the following commands:
+
+....
+# atomic host rollback
+# systemctl reboot
+....
+
+Two versions of Red Hat Enterprise Linux Atomic Host are available on the system after the initial upgrade. One is the currently running version. The other is either a new version recently installed from an upgrade or the version that was in place prior to the last upgrade.
+
+[IMPORTANT]
+Configuration is preserved across updates, but is only forward-preserved. This means that if you make a configuration change and then later roll back to a previous version, the configuration change you made is reverted.
+
+[NOTE]
+Running the `atomic host upgrade` command will replace the non-running version of Red Hat Enterprise Linux Atomic Host. This version will also be configured to be used during the next boot.
+
+To determine which version of the operating system is running, execute the following command:
+
+....
+# atomic host status
+....
+
+The output that includes the hash name of the directory in the */ostree/deploy/rhel-atomic-host/* directory looks like this:
+
+....
+# atomic host status
+State: idle
+Deployments:
+* rhel-atomic-host-ostree:rhel-atomic-host/7/x86_64/standard
+       Version: 7.3 (2016-09-27 17:53:07)
+    BaseCommit: d3fa3283db8c5ee656f78dcfc0fcffe6cd5aa06596dac6ec5e436352208a59cb
+        Commit: f5e639ce8186386d74e2558e6a34f55a427d8f59412d47a907793e046875d8dd
+        OSName: rhel-atomic-host
+
+  rhel-atomic-host-ostree:rhel-atomic-host/7.2/x86_64/standard
+       Version: 7.2.7 (2016-09-15 22:28:54)
+    BaseCommit: dbbc8e805f0003d8e55658dc220f1fe1397caf80221cc050eeb1bbf44bef56a1
+        Commit: 5cd426fa86bd1652ecd8f7d489f89f13ecb7d36e66003b0d7669721cb79545a8
+        OSName: rhel-atomic-host
+....
+
+This fictional sample output shows that version 7.3 will be booted into on the next restart.
+The version to be booted on the next restart is printed first.
+
+This fictional sample also shows that version 7.2.7 is the currently running version.
+The currently running version is marked with an asterisk (*).
+
+This output was created just after the atomic host upgrade command was executed, and that means that a new version has been staged to be applied at the next restart.

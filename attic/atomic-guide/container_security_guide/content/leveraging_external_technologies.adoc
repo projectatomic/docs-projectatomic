@@ -1,0 +1,45 @@
+This chapter explains how to build security zones with virtualization and
+using Kubernetes Network Security and Routing.
+
+
+=== Building Security Zones With Virtualization
+
+Dan Walsh had this idea, and there might eventually be a blog post about
+it, but I'm disinclined to bug him about it. As we all know from Dan's
+teachings, "containers don't contain" (meaning that containers are open
+to local privilege escalation attacks, and VMs are not). We will use
+Kubernetes to create "apartment complexes" (I know that this is a
+non-standard phrase, but this is from Dan's three-little-pigs example)
+that can keep different kinds of running code separate. For instance, you
+will have a VM for applications of a certain security level. If you are a
+law firm, you might have a VM per law-firm client (meaning an entity that
+hires a law firm, not the "client" role in a "client-server"
+architecture) with whom you work, and your associates work within
+containers running inside that VM (this means that if someone breaks into
+the VM, the target surface is only the data in that VM alone, not the
+data pertaining to other cases). Mesos is a resource management
+application from Apache that can run on top of Kubernetes that we may
+deal with here.
+
+
+=== Kubernetes Authorization and Security
+
+This is an area of investigation. Authorization, logging, and client
+certificate verification must all be investigated.
+
+
+=== Kubernetes Network Security and Routing
+
+The biggest concern facing Kubernetes is protecting the Kubernetes
+cluster from the containers themselves. The undesirable situation
+involves a container using its network access to ask Kubernetes to spawn
+an unauthorized container, and Kubernetes haplessly complying with that
+request. As part of "defense in depth", we'll investigate putting
+passwords and logs and certificates on Kubernetes as well as stopping
+these kinds of undesired attacks at the network level. If the container
+never needs to access Kubernetes features, then Kubernetes should be
+blocked from making networking-related requests. You can create
+containers that get what they need from Kubernetes early in their
+lifecycles and then close off their own firewalls, thereby closing down a
+potential attack vector and minimizing the attack surface of the
+container and of the environment.

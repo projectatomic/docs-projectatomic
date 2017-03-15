@@ -1,0 +1,69 @@
+=== Atomic Host
+
+*OStree update*:
+
+New Tree Version: 7.2.3 (hash: d620e841861c746b5a296337c1659e6625abfeff96844099d48540fc93717656) +
+Changes since Tree Version 7.2.2-2 (hash: 8b2cf24b420d659179dc866eab1bb341748839204ba56ed46a86218010789e91)
+
+*New packages*:
+
+* atomic-pkglayer-2016.1.1.gfbf8dde-2.el7 *
+
+=== Extras
+
+*Updated packages*:
+
+* atomic-1.9-4.gitff44c6a.el7
+* cockpit-0.96-2.el7
+* docker-1.9.1-25.el7
+* docker-distribution-2.3.1-1.el7 *
+* dpdk-2.2.0-2.el7 *
+* etcd-2.2.5-1.el7
+* kubernetes-1.2.0-0.9.alpha1.gitb57e8bd.el7
+* python-docker-py-1.7.2-1.el7
+
+*New packages*:
+
+* runc-0.0.8-1.git4155b68.el7 (Technology Preview) *
+
+The asterisk (*) marks packages which are available for Red Hat Enterprise Linux only.
+
+==== Container Images
+
+*Updated*:
+
+*	Red Hat Enterprise Linux Container Image (rhel7/rhel)
+*	Red Hat Enterprise Linux Atomic Tools Container Image (rhel7/rhel-tools)
+*	Red Hat Enterprise Linux Atomic rsyslog Container Image (rhel7/rsyslog)
+*	Red Hat Enterprise Linux Atomic sadc Container Image (rhel7/sadc)
+*	Red Hat Enterprise Linux Atomic cockpit-ws Container Image (rhel7/cockpit-ws)
+*	Red Hat Enterprise Linux Atomic etcd Container Image (rhel7/etcd)
+*	Red Hat Enterprise Linux Atomic Kubernetes-controller Container Image (rhel7/kubernetes-controller-mgr)
+*	Red Hat Enterprise Linux Atomic Kubernetes-apiserver Container Image (rhel7/kubernetes-apiserver)
+*	Red Hat Enterprise Linux Atomic Kubernetes-scheduler Container Image (rhel7/kubernetes-scheduler)
+
+*New*:
+
+*	Red Hat Enterprise Linux Atomic SSSD Container Image (rhel7/sssd) (Technology Preview)
+
+=== New Features
+
+* *Cockpit has been rebased to version 0.96*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1313781
++
+Cockpit packages that are part of Red Hat Enterprise Linux Atomic Host 7.2.3 include _cockpit-bridge_, _cockpit-shell_, _cockpit-docker_, and _cockpit-ostree_. Other cockpit-related software can be added to a Red Hat Enterprise Linux Atomic Host via containers (such as the `rhel7/cockpit-ws` container). Cockpit 0.96 is compatible with docker 1.10.
++
+This version fixes previous bugs with memory leaks, mostly related to DBus, and various navigation and connection issues. Also, you can now limit concurrent authentication similar to ssshd using the MaxStartups setting.
+
+* *New sub-commands added to the atomic CLI*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1312664
++
+The atomic command-line tool for managing Atomic systems and containers now includes the "top", "diff" and "migrate" sub-commands. For more information on the syntax and usage, see https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/cli-reference/#cli_commands.
+
+* *Support for customization of the host system*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1187119
++
+The new _atomic-pkglayer_ packages contain a tool to install debug packages on Atomic Host systems. It is intended only for use inside the Red Hat Enterprise Linux Atomic Tools container image (rhel7/rhel-tools). It provides a mechanism to add RPM packages to an Atomic Host by allowing you to include them in local ostree layers on the existing system. See https://access.redhat.com/articles/2245351[Installing RPMs on an Atomic Host with atomic-pkglayer] for a description of the *atomic-pkglayer* tool.

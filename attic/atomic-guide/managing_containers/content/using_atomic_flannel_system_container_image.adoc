@@ -1,0 +1,136 @@
+==== Overview
+
+The https://github.com/coreos/flannel/[flannel] service was designed to provide virtual subnets for use among container hosts. Using flannel, Kubernetes (or other container platforms) can ensure that each container pod has a unique address that is routable within a Kubernetes cluster. As a result, the job of finding ports and services between containers is simpler.
+
+The flannel container described here is what is referred to as a system container. A system container is designed to come up before the docker service or in a situation where no docker service is available. In this case, the flannel container is meant to be brought up after the etcd service (also available as a system container) and before docker and kubernetes services to provide virtual subnets that the later services can leverage.
+
+Besides bypassing the docker service, the flannel container can also bypass the docker command and the storage area used to hold docker containers by default. To use the container, you need a combination of commands that include *atomic* (to pull, list, install, delete and unstall the image), *skopeo* (to inspect the image), *runc* (to ultimately run the image) and *systemctl* to manage the image among your other systemd services.
+
+[NOTE]
+For RHEL 7.3, system containers in general and the flannel container specifically are supported as Tech Preview only.
+
+Here are some of the features of the flannel container:
+
+* *Supports atomic pull*: Use the *atomic pull --storage=ostree"* command to pull the container to the ostree storage area, instead of default docker storage, on your system.
+
+* *Supports atomic install*: Use the *atomic install --system* command to set up the flannel service to run as a systemd service.
+
+* *Configures the flannel service*: When the flannel service starts, configuration data are stored for flannel in the etcd keystore. To configure flannel, you can use the *runc* command to run an etcdctl command to configure flannel settings inside the etcd container.
+
+* *System container*: After you have used the *atomic* command to install the flannel container, you can use the systemd *systemctl* command to manage the service.
+
+==== Getting and Running the RHEL flannel System Container
+
+To use the flannel system container image on a RHEL system, you need to pull it,
+install it and enable it, as described in the following procedure:
+
+. *Pull and run the etcd container*: The flannel container is dependent on there being an available etcd keystore. See link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/7/single/getting-started-with-containers/#using_the_etcd_system_container_image[Using the etcd System Container Image] for information on pulling, installing, and running the etcd system container before setting up the flannel system container.
+
+. *Pull the flannel container*: While logged into the RHEL system,
+get the RHEL etcd container by running the following command:
++
+....
+# atomic pull --storage=ostree rhel7/flannel
+Image rhel7/flannel is being pulled to ostree ...
+Pulling layer 2bf01635e2a0f7ed3800c8cb3effc5ff46adc6b9b86f0e80743c956371efe553
+Pulling layer 38bd6ce6e1f2271d48ecb41a70a86122060ea91871a154b37d54ec66f593706f
+...
+....
++
+This pulls the flannel system container from the Red Hat registry to the ostree storage area on the local system. By setting ostree storage, the docker storage area is not used and the docker daemon and docker command won't see the pulled flannel container image.
+
+. *Install the flannel container*: Type the following to do a default installation of the flannel container so it is set up as a systemd service. See "Configuring flannel" to see options you could add to the *atomic install* command to change it from the default install shown here.
++
+....
+# atomic install --system rhel7/flannel
+Extracting to /var/lib/containers/atomic/flannel.0
+systemctl daemon-reload
+systemd-tmpfiles --create /etc/tmpfiles.d/flannel.conf
+systemctl enable flannel
+....
+
+. *Start the flannel service*: Use the *systemctl* command to start the installed etcd service as you would any other systemd service.
++
+....
+# systemctl start flannel
+....
++
+. *Check etcd and flannel with runc*: To make sure the flannel and etcd containers are running, you can use the *runc list* command as you would use *docker ps* to see containers running under docker:
++
+....
+# runc list
+ID      PID     STATUS   BUNDLE                    CREATED
+etcd    4521    running  /sysroot/ostree/deploy... 2016-10-25T22:58:13.756410403Z
+flannel 6562    running  /sysroot/ostree/deploy... 2016-10-26T13:50:49.041148994Z
+....
+
+. *Test that the flannel service is working*: If the flannel service is working properly, the next time you start up the docker0 network interface, the docker network interface should pick up an address range from those assigned by flannel. After starting flannel and before restarting docker, run these commands:
++
+....
+# ip a | grep docker | grep inet
+    inet 172.17.0.1/16 scope global docker0
+# systemctl reboot
+# ip a | grep docker | grep inet
+    inet 10.40.4.1/24 scope global docker0
+....
+
+Note that the docker0 interface picks up an address in the address range assigned by flannel and will, going forward, assign containers to addresses in the 10.40.4.0/24 address range.
+
+The "Configuring flannel" section shows ways of setting up the etcd service in different ways.
+
+==== Configuring flannel
+
+You can change how the flannel service is configured on the *atomic install* command line or after it is running using the *runc* command.
+
+===== Configuring etcd during "atomic install"
+
+Environment variables that that are defined initially when the flannel container starts up can be overridden on the *atomic install* command line using the *--set* option. For example, this example shows how to reset the value of FLANNELD_ETCD_ENDPOINTS:
+....
+# atomic install --system --set FLANNELD_ETCD_ENDPOINTS="http://192.168.122.55:2379" rhel7/flannel
+....
+
+This is how two of these variables are set by default:
+
+* *FLANNELD_ETCD_ENDPOINTS=http://127.0.0.1:2379*: Identifies the location of the etcd service IP address and port number.
+* *FLANNELD_ETCD_PREFIX=/atomic.io/network*: Identifies the location of flannel values in the etcd keystore.
+
+Here is the list of other values that you can change on the *atomic install* command line. See the Key Command Line Options and Environment Variables sections of the link:https://github.com/coreos/flannel[Flannel Github] page for descriptions of these settings.
+
+....
+* *FLANNELD_PUBLIC_IP*
+* *FLANNELD_ETCD_ENDPOINTS*
+* *FLANNELD_ETCD_PREFIX*
+* *FLANNELD_ETCD_KEYFILE*
+* *FLANNELD_ETCD_CERTFILE*
+* *FLANNELD_ETCD_CAFILE*
+* *FLANNELD_IFACE*
+* *FLANNELD_SUBNET_FILE*
+* *FLANNELD_IP_MASQ*
+* *FLANNELD_LISTEN*
+* *FLANNELD_REMOTE*
+* *FLANNELD_REMOTE_KEYFILE*
+* *FLANNELD_REMOTE_CERTFILE*
+* *FLANNELD_REMOTE_CAFILE*
+* *FLANNELD_NETWORKS*
+....
+
+===== Configuring flannel with "runc"
+
+Flannel settings that are stored in the etcd keystore can be changed by executing *etcdctl* commands in the etcd container. Here's an example of how to change the Network value in the etcd keystore so that flannel uses a different set of IP address ranges.
+
+....
+# runc exec etcd etcdctl set /atomic.io/network/config '{"Network":"10.40.0.0/16"}'
+# runc exec etcd etcdctl get /atomic.io/network/config
+{"Network":"10.40.0.0/16"}
+....
+The example just shown illustrates the *runc exec* command running *etcdctl set* at first to set the Network value. After that, runc executes the *etcdctl get* command to get configuration information.
+
+==== Tips for Running flannel Container
+
+If you are done with the flannel container image, you can remove it with the *atomic uninstall* command:
+
+....
+# atomic uninstall flannel
+....
+
+For more information on system containers, see link:http://www.projectatomic.io/blog/2016/09/intro-to-system-containers/[Introduction to System Containers].

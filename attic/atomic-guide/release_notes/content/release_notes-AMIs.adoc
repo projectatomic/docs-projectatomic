@@ -1,0 +1,27 @@
+With every release of RHEL Atomic Host, new versions of Amazon Machine Images (AMIs) uploaded to the Amazon Web Services (AWS). The ID for an AMI is different in each AWS region and they all change for each release. The following section provides a list of AMIs of RHEL Atomic Host that are currently in production and available on AWS.
+
+=== RHEL Atomic Host 7.2.6
+
+ami-0be48a78 : Cloud Access GP2 offering in eu-west-1 for x86_64 +
+ami-98cc8cf8 : Cloud Access GP2 offering in us-west-1 for x86_64 +
+ami-a40ff8cb : Cloud Access GP2 offering in eu-central-1 for x86_64 +
+ami-509b0847 : Cloud Access GP2 offering in us-east-1 for x86_64 +
+ami-daa47ab9 : Cloud Access GP2 offering in ap-southeast-1 for x86_64 +
+ami-13468172 : Cloud Access GP2 offering in ap-northeast-1 for x86_64 +
+ami-b389bcd0 : Cloud Access GP2 offering in ap-southeast-2 for x86_64 +
+ami-f91dd499 : Cloud Access GP2 offering in us-west-2 for x86_64 +
+ami-1c39ae70 : Cloud Access GP2 offering in sa-east-1 for x86_64 +
+
+=== RHEL Atomic Host 7.2.5
+
+ami-18e27774 : Cloud Access GP2 offering in sa-east-1 for x86_64 +
+ami-c3bfd5ac : Cloud Access GP2 offering in ap-south-1 for x86_64 +
+ami-57688038 : Cloud Access GP2 offering in eu-central-1 for x86_64 +
+ami-f8c90e98 : Cloud Access GP2 offering in us-west-2 for x86_64 +
+ami-3312e552 : Cloud Access GP2 offering in ap-northeast-1 for x86_64 +
+ami-9d905df0 : Cloud Access GP2 offering in us-east-1 for x86_64 +
+ami-a95ac2da : Cloud Access GP2 offering in eu-west-1 for x86_64 +
+ami-66529908 : Cloud Access GP2 offering in ap-northeast-2 for x86_64 +
+ami-8e7e3aee : Cloud Access GP2 offering in us-west-1 for x86_64 +
+ami-86e8c0e5 : Cloud Access GP2 offering in ap-southeast-2 for x86_64 +
+ami-cea674ad : Cloud Access GP2 offering in ap-southeast-1 for x86_64 +

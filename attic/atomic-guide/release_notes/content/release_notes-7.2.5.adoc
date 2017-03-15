@@ -1,0 +1,66 @@
+=== Atomic Host
+
+*OStree update*:
+
+New Tree Version: 7.2.5 (hash: 9bfe1fb65094d43e420490196de0e9aea26b3923f1c18ead557460b83356f058) +
+Changes since Tree Version 7.2.4 (hash: b060975ce3d5abbf564ca720f64a909d1a4d332aae39cb4de581611526695a0c)
+
+*Updated packages*:
+
+* rpm-ostree-client-2016.3.1.g5bd7211-2.atomic.el7.1
+* rpm-ostree-2016.3.1.g5bd7211-1.atomic.el7
+* ostree-2016.5-3.atomic.el7
+* cockpit-ostree-0.108-1.el7
+
+*New packages*:
+
+* openscap-daemon-0.1.5-1.el7
+
+=== Extras
+
+*Updated packages*:
+
+* atomic-1.10.5-5.el7
+* cockpit-0.108-1.el7
+* docker-1.10.3-44.el7
+* docker-distribution-2.4.1-1.el7 *
+* docker-latest-1.10.3-44.el7
+* dpdk-2.2.0-3.el7 *
+* etcd-2.2.5-2.el7
+* kubernetes-1.2.0-0.12.gita4463d9.el7
+* runc-0.1.1-4.el7 (Technology Preview) *
+
+The asterisk (*) marks packages which are available for Red Hat Enterprise Linux only.
+
+==== Container Images
+
+*Updated*:
+
+*	Red Hat Enterprise Linux Container Image (rhel7/rhel)
+*	Red Hat Enterprise Linux Atomic Tools Container Image (rhel7/rhel-tools)
+*	Red Hat Enterprise Linux Atomic rsyslog Container Image (rhel7/rsyslog)
+*	Red Hat Enterprise Linux Atomic sadc Container Image (rhel7/sadc)
+*	Red Hat Enterprise Linux Atomic cockpit-ws Container Image (rhel7/cockpit-ws)
+*	Red Hat Enterprise Linux Atomic etcd Container Image (rhel7/etcd)
+*	Red Hat Enterprise Linux Atomic Kubernetes-controller Container Image (rhel7/kubernetes-controller-mgr)
+*	Red Hat Enterprise Linux Atomic Kubernetes-apiserver Container Image (rhel7/kubernetes-apiserver)
+*	Red Hat Enterprise Linux Atomic Kubernetes-scheduler Container Image (rhel7/kubernetes-scheduler)
+*	Red Hat Enterprise Linux Atomic SSSD Container Image (rhel7/sssd) (Technology Preview)
+
+*New*:
+
+* Red Hat Enterprise Linux Atomic openscap Container Image (rhel7/openscap) (Technology Preview)
+
+=== New Features
+
+* *ostree admin unlock command now available*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1347339
++
+Red Hat Enterprise Linux Atomic Host 7.2.5 introduces the new command ostree admin unlock. It allows users to unlock the current ostree deployment and install packages temporarily. This is done by mounting a writable overlayfs on /usr. When a user reboots, the overlayfs is unmounted and the packages are no longer installed. Use the *ostree admin unlock --hotfix* option for the changes, such as package installs to persist across reboots. This command provides the same capabilities as atomic-pkglayer, which is now deprecated. There are known issues with overlayfs and SELinux, so this functionality is not intended for long term use.
+
+* *Strict browser security policy for Cockpit is now enforced*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1337971
++
+This defines what code can be run in a Cockpit session and mitigates a number of browser-based attacks.

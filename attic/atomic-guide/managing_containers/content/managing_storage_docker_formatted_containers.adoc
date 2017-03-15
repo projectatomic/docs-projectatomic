@@ -1,0 +1,396 @@
+=== Overview
+
+Running a large number of containers in production requires a lot of storage space. Additionally, creating and running containers requires the underlying storage drivers to be configured to use the most performant options. The default storage options for Docker-formatted containers vary between the different systems and in some cases they need to be changed. A default installation of RHEL uses loopback devices, whereas RHEL Atomic Host has LVM thin pools created during installation. However, using the loopback option is not recommended for production systems. During the planning phase, make sure of the following things:
+
+1) You are running direct-lvm and have LVM thin pools set up. This can be done using the *docker-storage-setup* utility.
+
+2) You allocate enough free space during installation or plan for an external storage to be attached to the system.
+
+This document also includes procedures on how to extend the storage when you run out of space. Some of these procedures are destructive, this is why it is recommended to plan in advance. Use the described procedures relevant to your system to help you set up the environment.
+
+=== Using docker-storage-setup
+
+The *docker-storage-setup* utility is installed with the _docker_ package and can assist you in setting up the direct LVM storage.
+
+When docker starts, it automatically starts the *docker-storage-setup* daemon. By default, *docker-storage-setup* tries to find free space in the Volume Group containing the root Logical Volume and tries to set up an LVM thin pool. If there is no free space in the Volume Group, *docker-storage-setup* will fail to set up an LVM thin pool and will fall back to using loopback devices.
+
+The default behavior of *docker-storage-setup* is controlled by the _/usr/lib/docker-storage-setup/docker-storage-setup_ configuration file. You can override these options by creating a file _/etc/sysconfig/docker-storage-setup_ using new values.
+
+docker-storage-setup needs to know where the free space is to set up a thin pool. Following are some of the ways you can configure the system to make sure docker-storage-setup can setup an LVM thin pool.
+
+See *man docker-storage-setup(1)* for more information. (Note that manual pages are not available by default on RHEL Atomic, you need to have the RHEL Atomic Tools container downloaded.)
+
+==== LVM thin pool in the volume group containing the root volume
+
+By default, docker-storage-setup looks for free space in the root volume group and creates an LVM thin pool. Hence you can leave free space during system installation in the root volume group and starting docker will automatically set up a thin pool and use it.
+
+==== LVM thin pool in a user specified volume group
+
+docker-storage-setup can be configured to use a specific volume group for creating a thin pool.
+
+....
+# echo VG=docker-vg >> /etc/sysconfig/docker-storage-setup
+# systemctl start docker
+....
+
+==== Setting up a volume group and LVM thin pool on user specified block device
+
+You can specify one or multiple block devices in the _/etc/sysconfig/docker-storage-setup_ file and docker-storage-setup will create a volume group and an LVM thin pool for the docker service to use.
+
+....
+# echo DEVS=/dev/vdb >> /etc/sysconfig/docker-storage-setup
+# systemctl start docker
+....
+
+=== Managing Storage in Red Hat Enterprise Linux
+
+In Red Hat Enterprise Linux, there is no free space in the root volume group by default. Therefore, some action to ensure docker-storage-setup can find free space is required.
+
+An easy way is to leave some free space in the volume group containing root during installation. The following section explains how to leave free space.
+
+==== How to Leave Space in the Volume Group Backing Root During Installation
+
+There are two methods to leave free space in the root volume group during installation. Using the interactive graphical installation utility Anaconda or by preparing a Kickstart file to control the installation.
+
+===== GUI Installation
+
+. Start the graphical installation; when you arrive at the "Installation Destination" screen, select "I will configure partitioning" from
+"Other Storage Options" and click "Done".
+
+. On the "Manual Partitioning" screen, where you are prompted to create mount points. Choose "Click here to create them automatically".
+This will create the default partitioning scheme.
+
+. Choose the root partition (/) , this displays the "Desired Capacity" input field.
+
+. Reduce that capacity to leave some free space in the root volume group.
+
+. By default, the volume group which has the root LV is big enough to accommodate user-created volumes. Any free space on disk is left free and is not part of that volume group. Change that by clicking on "Modify", selecting "Size policy" and setting that to "As large as possible". Click "Save". This makes sure that any unused space on disk is left free in the volume group.
+
+. Click "Done" to accept the proposed partitioning.
+
+. Click "Begin Installation".
+
+===== Kickstart Installation
+
+In a Kickstart file, use the "volgroup" Kickstart option with the "--reserved-percent" and "--reserved-space" options where you can specify how much space to leave free in the volume group. Here is an example section of a Kickstart file which leaves 20% free space in the root LV:
+
+....
+# Disk partitioning information
+part /boot --size=500
+part pv.1 --size=500 --grow
+volgroup rhel --pesize=4096 pv.1 --reserved-percent=20
+logvol /  --size=500 --grow --name=root --vgname=rhel
+logvol swap --size=2048 --name=swap --vgname=rhel
+....
+
+=== Managing Storage in Red Hat Enterprise Linux Atomic Host
+
+On RHEL Atomic Host, the root volume size is 3GB. There is free space in the root volume group and 60% of that is used by *docker-storage-setup* for setting up an LVM thin pool. The rest of the space is free and can be used for extending the root volume or for creating a thin pool.
+
+On RHEL Atomic Host with default partitioning setup, the *docker-storage-setup* service creates an LVM thin pool to be used by the container images. During installation, the installation program creates the *root* Logical Volume that is 3GB by default. Next, during boot, the docker-storage-setup service automatically sets up an LVM thin pool called *docker-pool* which takes 60% of the remaining space. The rest can be used for extending *root* or *docker-pool*. During boot, docker-storage-setup reads the /etc/sysconfig/docker-storage file to determine the type of storage used and it modifies it so that docker makes use of the LVM thin pool. You can override the defaults by creating a file called /etc/sysconfig/docker-storage-setup which will modify the behavior of the service during boot. If you do not create such file, then an LVM thin pool will be created by default.
+
+Red Hat Enterprise Linux Atomic Host installed from a cloud image with default partitioning has a Volume Group called *atomicos* and two Logical Volumes as part of that group. The name of the Volume Group varies between different images of Red Hat Enterprise Linux Atomic Host. For bare-metal and virtual installations the Volume Group name is derived from the host name. If the host is unnamed, the Volume Group will be called *rah*. The properties of the Volume Group and the Logical Volumes in them are the same across all images.
+
+You can run the *lvs* command to list the Logical Volumes on the system and see the Volume Group name:
+
+....
+# lvs
+LV                VG          Attr          LSize Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+docker-pool       atomicos    twi-aotz--    7.69g             14.36  2.56
+root              atomicos    -wi-ao----    2.94g
+....
+
+. The *Root partition* is called root and is 3GB by default. root is a Logical Volume that contains the following:
++
+* The _/var_ and _/etc_ directories.
+* The _/ostree/repo_ which contains the OSTree versions.
+* The _/var/lib/docker/_ directory which contains container images data, such as temporary data or the *docker volumes*.
+A *docker volume* is a unit of storage that a running container can request from the host system. The unit of storage can be provided by another container but also by the host directly. In the case of Red Hat Enterprise Linux Atomic Host, these volumes are automatically allocated to the *Root Partition*, in _/var/lib/docker/vfs/_.
+
+. A *Container Image Partition* called *docker-pool* which takes 60% of the remaining space. It is formatted as an LVM thin pool by the docker-storage-setup service. It is used to store the container images. The space used by *docker-pool* is managed by the docker-storage-setup service. When you pull a container image from a registry, for example, the image takes up space on this partition. Container images are read-only. Once an image is launched as a container, all writes (except to mounted volumes or docker volumes) are stored in this Logical Volume.
+
+It is very important to monitor the free space in docker-pool and not to allow it to run out of space. If the LVM thin pool runs out of space it will lead to a failure because the XFS file system underlying the LVM thin pool will be retrying indefinitely in response to any I/O errors. The LVM2 tools provide a facility to monitor a thin pool and extend it based on user settings. See the _Automatically extend thin pool LV and Data space exhaustion_ sections of the _lvmthin(7)_ manual page for more information. By default, docker-storage-setup configures the thin pool for auto extension. This means as the pool fills up, it will automatically grow and consume free space available in that volume group. If the volume group gets full and there is no space left for auto extension, then you can preemptively destroy old containers that are no longer needed in order to reclaim space. Or you can stop creating or modifying container images until additional storage is added to the system.
+
+* */etc/sysconfig/docker* - configured by the user
+* */etc/sysconfig/docker-storage* - configured by programs, but can be edited by the user (you have to disable docker-storage-setup)
+* */etc/sysconfig/docker-storage-setup* - configured by the user; only available in RHEL Atomic Host
+
+==== Changing the Default Size of the Root Partition During Installation
+
+To change the default *Root Partition* size, use the method below for your installation.
+
+* *Anaconda*: When you arrive at the "Installation Destination" screen, select "I will configure partitioning" from "Other Storage Options" and click "Done". This will lead you to the "Manual Partitioning" screen, where you are prompted to create mount points. Choose "Click here to create them automatically", which will give you the boot, root, and swap partitions. (At this point, you only have these partitions, *docker-pool* is created later by the docker-storage-setup service). Choose the root partition (/) and enter the new value in the "Desired Capacity" input field. When you finish the installation, the system boots with your custom configuration.
+
+* *Kickstart*: In the %post section of the Kickstart file, give the path to the /etc/sysconfig/docker-storage-setup file (which will be created automatically) and specify the necessary options after the command. The syntax is as follows:
+
+....
+%post
+cat > /etc/sysconfig/docker-storage-setup << EOF
+ROOT_SIZE=6G
+EOF
+%end
+....
+
+* *cloud-init*: The _write\_files_ directive in the user-data file is used to setup the /etc/sysconfig/docker-storage-setup file similarly to the Kickstart example above. This example user-data file sets the password for *cloud-user* to "atomic" and configures the root partition to be 6GB instead of the default 3GB.
+
+....
+#cloud-config
+password: atomic
+write_files:
+  - path: /etc/sysconfig/docker-storage-setup
+    permissions: 0644
+    owner: root
+    content: |
+      ROOT_SIZE=6G
+....
+
+==== Changing the Size of the Root Partition After Installation
+
+When you add container images to the *Container Image Partition* which require space in /var/lib/docker/, the image can request more space than is currently available on the *Root Partition*. A container image can request a docker volume when it has data that should not be stored in
+the container, for example the data from a database server. If you run out of space on *root*, you have three options:
+
+* Extend the Root Partition to use the free space in the volume group.
+* Add new storage to the host and extend the Root Partition.
+* Extend the Root Partition and shrink the Container Image Partition.
+
+===== How to extend the Root Partition to use free space in volume group
+
+If there is free space in volume group, then you can extend the root volume to use some or all of that free space and grow the root partition.
+
+....
+# lvextend -r -L +3GB /dev/atomicos/root
+....
+
+===== How to Add Additional Storage to the Host and Extend the Root Partition
+
+This option is non-destructive and will enable you to add more storage to the *Root Partition* and use it. This requires creating a new Physical Volume using a new disk device (in this example /dev/sdb), add it to *atomicos* Volume Group and then extend the *Root Partition* Logical Volume. You must stop the docker daemon and the docker-storage-setup service for this task. Use the following commands:
+
+....
+# systemctl stop docker docker-storage-setup
+# pvcreate /dev/sdb
+# vgextend atomicos /dev/sdb
+# lvextend -r -L +3GB /dev/atomicos/root
+# systemctl start docker docker-storage-setup
+....
+
+===== How to Extend the Root Partition Without Adding More Storage
+
+This option is destructive because the *Container Image Partition* will be destroyed. When it is not possible to add more storage to the *Root Partition*, you can extend it. Extending the *Root Partition* means that you will have to shrink the *Container Image Partition*. However, since LVM does not support shrinking Thinly-Provisioned Logical Volumes,
+
+Therefore, you must stop all running containers, destroy the *Container Image Partition*, and extend the *Root Partition*. _docker-storage-setup_ will reallocate the remaining space to the *Container Image Partition* when it is restarted. Use the following commands:
+
+
+....
+# systemctl stop docker docker-storage-setup
+# rm -rf /var/lib/docker/*
+# lvremove atomicos/docker-pool
+# lvextend -L +3GB /dev/atomicos/root
+# systemctl start docker-storage-setup
+# systemctl start docker
+....
+
+At this point you will need to download all container images again.
+
+=== Changing Storage Configuration
+
+If you change the storage configuration for Docker-formatted containers, you must also remember to remove the _/var/lib/docker_ directory. This directory contains the metadata for old images, containers, and volumes which are not valid for the new configuration. Examples of instances in which changing the storage configuration might be required include when switching from using loop devices to LVM thin pool, or switching from one thin pool to another. In the latter case, the old thin pool should be removed.
+
+....
+# systemctl stop docker docker-storage-setup
+# rm /etc/sysconfig/docker-storage-setup
+# lvremove docker/docker-pool
+# rm -rf /var/lib/docker/
+# systemctl start docker
+....
+
+=== Overlay Graph Driver
+
+The `overlay` graph driver uses OverlayFS, a copy-on-write union file system that features page-cache sharing between snapshot volumes. Similarly to LVM thin pool, OverlayFS supports efficient storage of image layers. However, compared to LVM thin pool, container creation and destruction with OverlayFS uses less memory and is more performant.
+
+[WARNING]
+=======
+Note that OverlayFS is not POSIX-compliant (some of the file system semantics are different from standard file systems like ext4 and XFS) and does not yet support SELinux. Therefore, make sure your applications work with OverlayFS before enabling it with the docker service . For more information on the use of OverlayFS with the docker service, see link:https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/7.2_Release_Notes/technology-preview-file_systems.html[Chapter 19. File Systems] from the Red Hat Enterprise Linux 7.2 Release Notes.
+=======
+
+The general way to enable the `overlay` Graph Driver for the docker service  is to disable SELinux and specify `overlay` in _/etc/sysconfig/docker-storage-setup_.
+
+[IMPORTANT]
+====
+Changing the storage backend is a destructive operation.
+Before starting, be sure to back up your images. This can be done in two ways:
+
+1. Use `docker save` to back up your images and then and `docker load` to restore them.
+
+2. Use `atomic storage export` to save all data and `atomic storage import` to restore it into the new storage backend.
+====
+
+Stop docker and remove the current storage:
+
+----
+# systemctl stop docker docker-storage-setup
+# rm -rf /var/lib/docker/
+----
+
+Disable SELinux, by removing the option `--selinux-enabled` from the `OPTIONS` variable in _/etc/sysconfig/docker_:
+
+----
+# sed -i '/OPTIONS=/s/--selinux-enabled//' /etc/sysconfig/docker
+----
+
+Set `STORAGE_DRIVER` to `overlay` in _/etc/sysconfig/docker-storage-setup_:
+
+----
+STORAGE_DRIVER=overlay
+----
+
+Restart docker-storage-setup, and then docker:
+
+----
+# systemctl start docker-storage-setup
+# systemctl start docker
+----
+
+* *Kickstart*
++
+For a Kickstart installation, use the following commands in the `%post` section:
++
+----
+%post
+sed -i '/OPTIONS=/s/--selinux-enabled//' /etc/sysconfig/docker
+echo "STORAGE_DRIVER=overlay" >> /etc/sysconfig/docker-storage-setup
+%end
+----
+
+* *cloud-init*
++
+For a cloud-init installation, include the following snippet in the _user-data_ file:
++
+[source,yaml]
+----
+runcmd:
+  - sed -i '/OPTIONS=/s/--selinux-enabled//' /etc/sysconfig/docker
+  - echo "STORAGE_DRIVER=overlay" >> /etc/sysconfig/docker-storage-setup
+----
+
+=== Increasing the Base Device Size
+
+The "base device size" is the maximum size an image or container can grow to. You can check the default base size for your version of docker by running *docker info*:
+
+----
+# docker info
+Containers: 0
+Images: 0
+Server Version: 1.9.1
+Storage Driver: devicemapper
+Pool Name: docker-253:1-1313713-pool
+Pool Blocksize: 65.54 kB
+Base Device Size: 107.4 GB
+----
+
+The base device size has been changed since docker 1.9 from 100GB to 10GB. The following is a list of the default sizes for the different versions of docker:`
+
+* docker 1.9  Base Device Size: 107.4 GB
+* docker 1.10 Base Device Size: 10.74 GB
+* docker 1.11 Base Device Size: 10.74 GB
+
+This default limit is defined by docker and will apply to all future images and containers. You can increase this per container limit using the *--dm.basesize* option, and the docker-storage-service will update it on next reboot.
+
+....
+# docker daemon --storage-opt --dm.basesize=20GB
+....
+
+Limitations:
+
+* This option only applies to the _devicemapper_ storage backend.
+
+* You can only expand the base size, but you cannot set a limit smaller than the default for your version of docker.
+
+* All new containers would not have the increased rootfs size. Even after restarting the daemon with the new base device size using *--storage-opt dm.basesize=20G*, you still need to update all the existing images in order for new containers to reap benefits of this new size.
+
+* With this approach, the heaviest application (container) dictates the size for the rest of the containers, for example, if you want to have 100 containers on your infrastructure and one of them is a data intensive application requiring 100 GB of space, you would have to set the base device size to 100 GB. Even though there are 99 other containers that only need 200 MB of space each.
+
+=== Resetting storage for containers
+
+Since this is a destructive command, and requires some preparations, following is a procedure explaining in detail how to use the command:
+
+. Make sure that you have a version of Atomic Host that is 7.2.5 or later:
++
+....
+# atomic host upgrade
+....
++
+. Confirm that you have a version of Atomic Host that is 7.2.5 or later by checking the Version field when you run *atomic host status*:
++
+....
+# atomic host status
+State: idle
+Deployments:
+* rhel-atomic-host-ostree:rhel-atomic-host/7/x86_64/standard
+       Version: 7.2.6 (2016-07-29 19:54:25)
+        Commit: b672bf8a457cb28e003dee20c53749636ef5fce3e4743afe4aaad269d3aaa62a
+        OSName: rhel-atomic-host
+
+  rhel-atomic-host-ostree:rhel-atomic-host/7/x86_64/standard
+       Version: 7.2.5 (2016-06-18 15:21:12)
+        Commit: 9bfe1fb65094d43e420490196de0e9aea26b3923f1c18ead557460b83356f058
+        OSName: rhel-atomic-host
+....
++
+. List the current contents of the storage to make sure everything is safe to delete.
++
+....
+# atomic images
+
+  REPOSITORY																		TAG      IMAGE ID       CREATED            VIRTUAL SIZE
+  registry.access.redhat.com/rhel6							latest   sha256:b335a   2016-07-07 13:31   195.66 MB
+  registry.access.redhat.com/rhel7/rhel-tools		latest   sha256:38819   2016-06-22 06:54   1.3 GB
+  registry.access.redhat.com/rhel7/openscap			latest   sha256:da0d5   2016-06-20 14:24   363.37 MB
+  registry.access.redhat.com/rhel7/rsyslog			latest   sha256:878a5   2016-06-16 17:18   216.0 MB
+  registry.access.redhat.com/rhel7							latest   sha256:5fbb7   2016-06-16 13:27   203.5 MB
+....
++
+. Stop the docker daemon:
++
+....
+# systemctl stop docker
+....
++
+. Run the *atomic storage reset* command:
++
+....
+# atomic storage reset
+....
++
+. Start the docker daemon again:
++
+....
+# systemctl start docker
+....
++
+. Run the *atomic images list* command to show that all images and containers have been removed and that storage on the Atomic Host has been reset:
++
+....
+# atomic images
+
+  REPOSITORY TAG IMAGE ID       CREATED            VIRTUAL SIZE
+....
+
+=== Storage Backup Guidelines
+
+As of February 2016, Red Hat does not endorse any single backup technology for containers. We do, however, suggest the following general guidelines:
+
+* Ensure that the Dockerfiles that you use to create containers are backed up.
+
+* Ensure that any data required by or generated by your containers is housed on an external source. Back up the external source in a responsible manner and on a reasonable schedule.
+
+* Create a local docker repository and use it for saving and retrieving custom containers.
+
+* Use *docker save/load* or *atomic storage export/import* to create portable images of containers and back up those images.
+
+=== Additional Information About Storage
+
+* The link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Logical_Volume_Manager_Administration/thinprovisioned_volumes.html[Thinly-Provisioned Logical Volumes]
+section from the LVM Administrator Guide explains LVM Thin Provisioning in detail.
+
+* The link:https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Storage_Administration_Guide/index.html[Red Hat Enterprise Linux 7 Storage Administration Guide]
+provides information on adding storage to Red Hat Enterprise Linux 7.

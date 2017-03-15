@@ -1,0 +1,82 @@
+=== Atomic Host
+
+*OStree update*:
+
+New Tree Version: 7.3.2 (hash: 96826a0d917d7ff10f9fd0289581649f2ffbddd76f3b80efd3d95cc11915cacb) +
+Changes since Tree Version 7.3.1 (hash: 42cfe1ca3305defb16dfd59cd0be5c539f19ea720dba861ed11e13941423ae86)
+
+*Updated packages*:
+
+* cockpit-ostree-126-1.el7
+* ostree-2016.15-1.atomic.el7
+* rpm-ostree-2016.13-1.atomic.el7
+* rpm-ostree-client-2016.13-1.atomic.el7
+
+=== Extras
+
+*Updated packages*:
+
+* atomic-1.14.1-5.el7
+* cockpit-126-1.el7
+* docker-1.12.5-14.el7
+* docker-latest-1.12.5-14.el7
+* etcd-3.0.15-1.el7
+* flannel-0.5.5-2.el7
+* gomtree-0.3.0-1.el7
+* kubernetes-1.4.0-0.1.git87d9d8d.el7
+* oci-register-machine-0-1.11.gitdd0daef.el7
+* oci-systemd-hook-0.1.4-9.git671c428.el7
+* runc-1.0.0-1.rc2.el7 *
+* skopeo-0.1.17-1.el7
+
+The asterisk (*) marks packages which are available for Red Hat Enterprise Linux only.
+
+==== Container Images
+
+*Updated*:
+
+* Red Hat Enterprise Linux Container Image (rhel7/rhel)
+* Red Hat Enterprise Linux Atomic Tools Container Image (rhel7/rhel-tools)
+* Red Hat Enterprise Linux Atomic rsyslog Container Image (rhel7/rsyslog)
+* Red Hat Enterprise Linux Atomic sadc Container Image (rhel7/sadc)
+* Red Hat Enterprise Linux Atomic cockpit-ws Container Image (rhel7/cockpit-ws)
+* Red Hat Enterprise Linux Atomic etcd Container Image (rhel7/etcd)
+* Red Hat Enterprise Linux Atomic Kubernetes-controller Container Image (rhel7/kubernetes-controller-mgr)
+* Red Hat Enterprise Linux Atomic Kubernetes-apiserver Container Image (rhel7/kubernetes-apiserver)
+* Red Hat Enterprise Linux Atomic Kubernetes-scheduler Container Image (rhel7/kubernetes-scheduler)
+*	Red Hat Enterprise Linux Atomic SSSD Container Image (rhel7/sssd) (Technology Preview)
+* Red Hat Enterprise Linux Atomic Identity Management Server Container Image (rhel7/ipa-server) (Technology Preview)
+* Red Hat Enterprise Linux Atomic openscap Container Image (rhel7/openscap) (Technology Preview)
+
+
+=== New Features
+
+* *the etcd3 package has been deprecated*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=XXXXXX
++
+The *etcd3* package and the Red Hat Enterprise Linux Atomic etcd3 Container Image have been deprecated and are no longer available in the Red Hat Enterprise Linux 7 Extras channel. Users that have the etcd3 component installed can update to etcd version 3.0.15 or later, which provides the same functionality and is backwards compatible with etcd3.
+
+* *Cockpit has been rebased to version 126*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1403171
++
+Most notable changes:
++
+** Show security scan information about containers.
+** Display OSTree signatures on RHEL Atomic Host.
+** During login users can choose whether their password is cached and reused.
+** Allow renaming of active devices in the networking interface.
+** More clearly indicate when checking for network connectivity.
+** Allow more time for rollback when making network changes.
+** The "remotectl" command can now combine certificate and key files.
+** Domain join operations can now be properly canceled.
+** Kerberos authentication now works even if gss-proxy is in use.
+** When proxied, support for the X-Forwarded-Proto HTTP header.
+** Ignore block devices with zero size in the storage interface.
+** Expand logical volumes and partitions inline on their devices.
+** No longer offer to format read-only block devices.
+** Use stored passphrases for LUKS devices properly.
+** System shutdown can be scheduled by date.
+** Properly terminate user sessions on the Accounts page.
+** Fixed regression on login screen in older Internet Explorer browsers.

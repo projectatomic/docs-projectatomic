@@ -1,0 +1,92 @@
+=== Overview
+
+The https://github.com/coreos/etcd/[etcd] service provides a highly-available key value store that can be used by applications that need to access and share configuration and service discovery information. Applications that use etcd include http://kubernetes.io/[Kubernetes], https://github.com/coreos/fleet[fleet], https://github.com/vulcand/vulcand[vulcand], and https://github.com/coreos/locksmith[locksmith].  
+
+The etcd Atomic Container Image is a Docker formatted image
+that is designed particularly for use on a Red Hat Enterprise Linux Atomic (RHEL Atomic) host. By using this container with the *atomic* command, you can take advantage of pre-configured options designed to help you use the container to start an etcd service without any further configuration. The etcd service can then be used for use by a variety of applications that need a key value store.
+
+*NOTE*: The etcd container is currently not supported in the https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-with-containers/#get_started_orchestrating_containers_with_kubernetes[Orchestrating Containers with Kubernetes] or https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-with-containers/#creating_a_kubernetes_cluster_to_run_docker_formatted_container_images[Creating a Kubernetes Cluster] configuration described in the Red Hat Container Getting Started guide. Refer to those documents for instructions on manually configuring etcd for Kubernetes. You can get around that by running the etcd container on a separate system from your Kubernetes hosts.
+
+Here are some of the features of the etcd container:
+
+* *Installs from atomic command*: When you use the *atomic run* command to get and
+run the etcd container, the container itself is pulled from the
+registry and the etcd service starts.
+
+* *Configures the etcd service*: When the etcd service starts, a set of ETCD environment variables are exported. Those variables identify the location of the etcd data directory and set the IP addresses and ports the etcd service listens on. 
+
+* *Super privileged container*: Keep in mind that running the etcd container opens privileges
+from that container to the host system. The container runs as root and has access to the host's file system.
+
+=== Getting and Running the RHEL etcd Container
+
+To use the etcd Atomic Container Image on a RHEL Atomic host, you need to
+install it and run it, as described in the following procedure:
+
+. *Install RHEL Atomic Host*:  To install and configure a RHEL Atomic host, refer to the
+appropriate installation guide listed on the
+https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/7/installation-and-configuration-guide/installation-and-configuration-guide[Red Hat Enterprise Linux Atomic Host Installation and Configuration Guide].
+
+. *Pull and run the RHEL etcd Container*: While logged into the RHEL Atomic host,
+get and start the RHEL etcd Container by running the following command:
++
+....
+# docker pull rhel7/etcd
+# atomic run rhel7/etcd
+/usr/bin/docker run -d  -p 4001:4001 -p 7001:7001 -p 2379:2379 -p 2380:2380 --name etcd rhel7/etcd  
+....
++
+From the docker command line started from the *atomic run* command, you can see that the etcd container runs as a daemon process (-d) and maps several TCP ports (4001, 7001, 2379, and 2380) from the container into the same port numbers on the host. The rhel7/etcd image is run and the name etcd is assigned to the running container.
+
+. *Check that the container is running*: Type the following to check that the etcd
+container is running:
++
+....
+# docker ps | grep etcd
+CONTAINER ID  IMAGE       COMMAND                 CREATED         STATUS     
+PORTS                                                                           NAMES
+8f5485a4f886  rhel7/etcd  "/usr/bin/etcd-env.sh"  17 minutes ago  2 minutes ago
+0.0.0.0:2379-2380->2379-2380/tcp, 0.0.0.0:4001->4001/tcp, 0.0.0.0:7001->7001/tcp etcd
+....
++
+*NOTE*: The full name of the image is "registry.access.redhat.com/rhel7/etcd:latest",
+which include both the name of the registry from which it was downloaded and the
+"latest" tag. The actual container that is run locally, however,
+is simply named etcd. The difference between the image and container is central
+to the way docker works.
+
+. *Test that the etcd service is working*: You can use the *curl* command to set and retrieve keys from your etcd service. This example assigns a value to a key called *testkey*, then retrieves that value:
+
+....
+# curl -L http://127.0.0.1:2379/v2/keys/testkey -XPUT -d value="testing my etcd"
+{"action":"set","node":{"key":"/testkey","value":"testing my etcd","modifiedIndex":6,"createdIndex":6}}
+# curl -L http://127.0.0.1:2379/v2/keys/testkey
+{"action":"get","node":{"key":"/testkey","value":"testing my etcd","modifiedIndex":6,"createdIndex":6}}
+....
+
+Note that the first action does a *set* to set the key and the second does a *get* to return the value of the key.
+
+With the etcd container running, you can configure services to use the etcd keystore or continue to set and get keys manually.
+
+=== Tips for Running etcd Container
+
+Here are some tips to help you understand a few other issues related to running the RHEL etcd container:
+
+* *Image and Container Lifecycle*
++
+If you want to upgrade to a newer version of the Red Hat Enterprise Linux etcd Atomic
+container image, it is not enough to merely download the new image with *docker pull
+rhel7/etcd*. You must also explicitly remove the existing etcd container with the
+following commands, before re-running it, in order to create a fresh container from the new image:
++
+....
+# docker pull rhel7/etcd    
+....
++
+If a new image downloads, run the following:
++
+....
+# docker stop etcd
+# docker rm etcd
+# atomic run rhel7/etcd
+....

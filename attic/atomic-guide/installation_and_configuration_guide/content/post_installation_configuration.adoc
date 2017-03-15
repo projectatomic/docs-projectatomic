@@ -1,0 +1,61 @@
+Red Hat Enterprise Linux Atomic Host is configured using the configuration files in the */etc/* directory. This is similar to the way that Red Hat Enterprise Linux 7 is configured. Because Red Hat Enterprise Linux Atomic Host is a minimal server product that has no desktop, the graphical configuration tools found in the GUI are not available.
+
+=== Configuring Networking
+
+If you did not configure networking during the installation you may configure it post-installation using the _nmcli_ tool. The following commands create a network connection called *atomic*, set up a host name, and then activate that connection.
+
+....
+# nmcli con add type ethernet con-name atomic ifname eth0
+# nmcli con modify my-office my-office ipv4.dhcp-hostname atomic ipv6.dhcp-hostname atomic
+# nmcli con up atomic
+....
+
+For more details on how to use the _nmcli_ tool, see https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Networking_Guide/sec-Using_the_NetworkManager_Command_Line_Tool_nmcli.html#sec-Connecting_to_a_Network_Using_nmcli[Section 2.3.2. Connecting to a Network Using nmcli] in the Red Hat Enterprise Linux 7 Networking Guide.
+
+=== Registering RHEL Atomic Host
+
+To enable software updates, you must register your Red Hat Enterprise Linux Atomic Host installation. This is done with the *subscription-manager* command as described below. If your system is located on a network that requires the use of an HTTP proxy, see the Red Hat Knowledge Base Article on https://access.redhat.com/solutions/57669[configuring subscription manager to use an HTTP proxy]. The *--name=* option may be included if you wish to provide an easy to remember name to be used when reviewing subscription records.
+
+....
+$ sudo subscription-manager register --username=<username> --auto-attach
+....
+
+[NOTE]
+Red Hat Enterprise Linux Atomic Host works only with Red Hat Subscription Manager (RHSM).
+Red Hat Enterprise Linux Atomic Host does not work with RHN.
+
+[NOTE]
+Red Hat Enterprise Linux Atomic Host registers two product IDs. The first is Product ID 271, Red Hat Enterprise Linux Atomic Host. The second is Product ID 69, Red Hat Enterprise Linux Server. They both use the same entitlement.
+
+A properly registered system will display both IDs as is shown below:
+
+....
+$ sudo subscription-manager list
++-------------------------------------------+
+    Installed Product Status
++-------------------------------------------+
+Product Name:   Red Hat Enterprise Linux Atomic Host
+Product ID:     271
+Version:        7
+Arch:           x86_64
+Status:         Subscribed
+Status Details:
+Starts:         02/27/2015
+Ends:           02/26/2016
+
+Product Name:   Red Hat Enterprise Linux Server
+Product ID:     69
+Version:        7.1
+Arch:           x86_64
+Status:         Subscribed
+Status Details:
+Starts:         02/27/2015
+Ends:           02/26/2016
+....
+
+The *subscription-manager* command is also documented in
+https://access.redhat.com/site/documentation/en-US/Red_Hat_Subscription_Management/1/html/RHSM/registering-cmd.html[Registering from the Command Line] of the Red Hat Subscription Management guide.
+
+=== Managing User Accounts
+
+Currently, some system users that in Red Hat Enterprise Linux 7 would be listed in the */etc/passwd* file have been relocated into the read-only */usr/lib/passwd* file. Because applications on Red Hat Enterprise Linux Atomic Host are run inside Linux containers, this does not affect deployment. The traditional user management tools, such as *useradd*, write locally added users to the */etc/passwd* file as expected.

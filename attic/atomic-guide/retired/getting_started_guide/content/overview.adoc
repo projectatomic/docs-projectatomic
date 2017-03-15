@@ -1,0 +1,42 @@
+Red Hat Enterprise Linux Atomic host is a variation of Red Hat Enterprise Linux 7 optimized to run Linux containers in the Docker format.
+It has been modified to be light-weight and efficient, making it a particularly optimal operating system to use as a docker run-time system for cloud environments.
+
+Red Hat Enterprise Linux Atomic Host uses SELinux to provide strong safeguards in multi-tenant environments, and provides the ability to perform
+atomic upgrades and rollbacks, enabling quicker and easier maintenance with less downtime. Red Hat Enterprise Linux Atomic Host uses the same upstream
+projects delivered via the same RPM packaging as Red Hat Enterprise Linux 7.
+
+Red Hat Enterprise Linux Atomic Host is pre-installed with the following tools to support Linux containers:
+
+* docker
+* Kubernetes
+
+Red Hat Enterprise Linux Atomic Host makes use of the following technologies:
+
+* OSTree and rpm-OSTree - These projects provide atomic upgrades and the ability to roll back upgrades.
+* systemd - The powerful new init system for Linux systems that enables faster boot times and easier system orchestration.
+* SELinux - Enabled by default to provide complete multi-tenant security. You'll also find Integrity Measurement Architecture (IMA), audit and libwrap
+available from systemd.
+
+*IMPORTANT*: Red Hat Enterprise Linux Atomic Host is not managed in the same way that other Red Hat Enterprise Linux 7 variants are managed. Specifically:
+
+* You do not use Yum to upgrade the system.
+* There are only two writable directories for local system configuration: /etc/ and /var/. The /usr/ directory is mounted read-only.
+Other directories are symlinks to a writable location. For example, the /home/ directory is a symlink to the /var/home/ directory.
+* The default partitioning dedicates most of the available space for the containers, using direct LVM instead of the default loopback.
+* RHEL Atomic Host provides a choice between **docker** and **docker-latest**, but Red Hat does not support running both **docker** and **docker-latest** on the same machine at the same time.
+
+User and Host specific data should be stored only in the */var/* directory. Only configuration files in the /etc/ directory should be modified.
+
+Preinstalled tools
+* RHEL Atomic Host comes with all the tools for running containers preinstalled - docker, kubernetes, etcd, flannel, atomic.
+* no man pages
+* Atomic has samba SSSD and iSCSI tools preinstalled.
+* SELinux is enabled by default.
+
+Live changes capabitilies:
+* However, you can layer packages with the `rpm-ostree pkg-add` command. This can be used for live updates as opposed to upgrade or rollback which require reboot.
+
+File system:
+* Yum and rpm are only used for reading commands. The file system is a preinstalled, immutable OSTree. Any additional tools such as rsyslog, strace, or tcpdump should be deployed in a container running in privileged mode (`--net=host privileged`).
+* RHEL - XFS, RHEL Atomic - ext4
+* storage back-end RHEL - loopback, RHEL Atomic - direct-lvm

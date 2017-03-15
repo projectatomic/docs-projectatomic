@@ -1,0 +1,32 @@
+To prepare for a Kickstart installation, you can follow the instructions in the link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Installation_Guide/chap-kickstart-installations.html[Kickstart Installations] chapter from the Red Hat Enterprise Linux Installation Guide. Kickstart installations of Red Hat Enterprise Linux Atomic Host do not differ much from Red Hat Enterprise Linux installations except for a few specific considerations.
+
+Red Hat Enterprise Linux Atomic Host uses the `rpm-ostree` technology for package management and updates. Therefore, the `%packages` section is not used in the Kickstart file. Instead, the file _must_ contain a command for including the `interactive-defaults.ks` file from the installation media. This file contains Kickstart commands that point to an OSTree repository on the media and also disable the cloud-init service.
+
+Use default partitioning for Red Hat Enterprise Linux Atomic Host. This is handled by the `autopart` command. Do not use `part`, `volgroup` or `logvol`.
+
+Following is an example Kickstart file for Atomic Host which can be used as a reference:
+
+....
+lang en_US.UTF-8
+keyboard us
+timezone America/Chicago
+#rootpw --iscrypted password_hash
+rootpw --plaintext atomic
+auth --enableshadow --passalgo=sha512
+ostreesetup --nogpg --osname=rhel-atomic-host --remote=rhel-atmoic-host --url=file:///install/ostree --ref=rhel-atomic-host/7/x86_64/standard
+services --disabled cloud-init,cloud-config,cloud-final,cloud-init-local
+clearpart --all --initlabel
+zerombr
+autopart
+#%include /usr/share/anaconda/interactive-defaults.ks
+%post --erroronfail
+fn=/etc/ostree/remotes.d/rhel-atomic-host.conf; if test -f ${fn} && grep -q -e '^url=file:///install/ostree' ${fn}$; then rm ${fn}; fi
+%end
+%post --erroronfail
+rm -f /etc/ostree/remotes.d/*.conf
+echo 'unconfigured-state=This system is not registered to Red Hat Subscription Management. You can use subscription-manager to register.' >> $(ostree admin --print-current-dir).origin
+%end"
+....
+
+The `rootpw` command lets you set the root's password beforehand and the `--iscryped` option accepts a hash of the password you have already created. You can use either `--iscrypted` or `--plaintext` which will not encrypt your password. The `clearpart --all --initlabel` command will erase all disks which can be reached by the installer, including any attached network storage. Using `zerombr` will prevent Anaconda from prompting for confirmation which will allow for a completely unattended installation. The `autopart` command will set the partitioning to default, which is the recommended option for RHEL Atomic Host. The `%include` command points to the file which contains commands that point to an OSTree repository and disables the cloud-init service. This command is mandatory for RHEL Atomic Host.
+

@@ -1,0 +1,125 @@
+=== Atomic Host
+
+*OStree update*:
+
+New Tree Version: 7.3 (hash: 90c9735becfff1c55c8586ae0f2c904bc0928f042cd4d016e9e0e2edd16e5e97) +
+Changes since Tree Version 7.2.7 (hash: 347c3f5eb641e69fc602878c646cf42c4bcd5d9f36847a1f24ff8f3ec80f17b1)
+
+*Updated packages*:
+
+* atomic-devmode-0.3.5-1.el7
+* cockpit-ostree-118-2.el7.x86_64
+* openscap-daemon-0.1.6-1.el7
+* ostree-2016.10-1.atomic.el7
+* redhat-release-atomic-host-7.3-20160824.0.atomic.el7.3
+* rpm-ostree-2016.9-1.atomic.el7
+* rpm-ostree-client-2016.9-1.atomic.el7
+
+=== Extras
+
+*Updated packages*:
+
+*	 atomic-1.12.5-2.el7
+*	 cockpit-118-2.el7
+*	 docker-1.10.3-57.el7
+*	 docker-distribution-2.5.0-1.el7 *
+*	 docker-latest-1.12.1-3.el7
+*	 flannel-0.5.5-1.el7
+*	 kubernetes-1.3.0-0.2.gitc5ee292.el7
+*	 oci-register-machine-0-1.9.gitaf6c129.el7
+*	 oci-systemd-hook-0.1.4-6.git337078c.el7
+*	 python-docker-py-1.9.0-1.el7
+*	 skopeo-0.1.14-0.6.el7
+
+*New packages*:
+
+* etcd3-3.0.3-1.el7 *
+
+The asterisk (*) marks packages which are available for Red Hat Enterprise Linux only.
+
+==== Container Images
+
+*Updated*:
+
+*	Red Hat Enterprise Linux Container Image (rhel7/rhel)
+*	Red Hat Enterprise Linux Atomic Tools Container Image (rhel7/rhel-tools)
+*	Red Hat Enterprise Linux Atomic rsyslog Container Image (rhel7/rsyslog)
+*	Red Hat Enterprise Linux Atomic sadc Container Image (rhel7/sadc)
+*	Red Hat Enterprise Linux Atomic cockpit-ws Container Image (rhel7/cockpit-ws)
+*	Red Hat Enterprise Linux Atomic etcd Container Image (rhel7/etcd)
+*	Red Hat Enterprise Linux Atomic Kubernetes-controller Container Image (rhel7/kubernetes-controller-mgr)
+*	Red Hat Enterprise Linux Atomic Kubernetes-apiserver Container Image (rhel7/kubernetes-apiserver)
+*	Red Hat Enterprise Linux Atomic Kubernetes-scheduler Container Image (rhel7/kubernetes-scheduler)
+*	Red Hat Enterprise Linux Atomic SSSD Container Image (rhel7/sssd) (Technology Preview)
+* Red Hat Enterprise Linux Atomic openscap Container Image (rhel7/openscap) (Technology Preview)
+
+*New*:
+
+*	Red Hat Enterprise Linux Atomic etcd3 Container Image (rhel7/etcd3) (Technology Preview)
+*	Red Hat Enterprise Linux Atomic flannel Container Image (rhel7/flannel) (Technology Preview)
+
+=== New Features
+
+* *Features, previously available as a Technology Preview, are now fully supported*
++
+The following features that have been available as a Technology Preview are now fully supported:
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1277245
+** *runc* - runC is a lightweight, portable implementation of the the Open Container Format (OCF) that provides container runtime. The runc command-line tool can be used for spawning and running containers according to the Open Container Project (OCP) specification. Containers are started as a child process of runC and can be embedded into various other systems without having to run a docker daemon.
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1347417
+** *skopeo* - The *skopeo* command lets you inspect images from container image registries, get images and image layers, and use signatures to create and verify files without using the docker daemon or the *docker* command. For detailed information, see the https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-with-containers/#using_skopeo_to_work_with_container_registries[Red Hat Enterprise Linux Atomic Host 7 Getting Started with Containers Guide]
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1303238
+** *atomic-devmode* - The atomic-devmode package allows users to easily try the Red Hat Atomic Cloud Image. It adds a new GRUB2 menu item labeled Developer Mode which allows users to boot the system without having to set up cloud-init. When in Developer Mode, a root password will automatically be generated, and users will be logged automatically into an interactive session in which Cockpit is downloaded and started.
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1343731
+** *openscap* - The Red Hat Enterprise Linux Atomic openscap Container Image contains the OpenSCAP-daemon, a service that performs SCAP scans of bare-metal machines, virtual machines and containers. Running the openscap container enables container vulnerability scanning with the *atomic scan* command. To install this new image, use:
++
+....
+# atomic install rhel7/openscap
+....
+
++ 
+Additionally, the `openscap` RPM available for Red Hat Enterprise Linux is also now fully supported.
+
+* *System containers now available as a Technology Preview*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=XXXXXX
++
+System containers provide a way to containerize services that need to run before the docker daemon is running. They use different technologies than the Docker-formatted containers, `ostree` for storage, `runc` for runtime, `skopeo` for searching and `systemd` for service management. Previously, such services were provided in the system as packages, or as part of the ostree in Atomic Host and containerizing them makes the system itself smaller. Red Hat provides the *etcd* and *flannel* services as system containers.
++
+Note that the new *etcd* system container image replaces the *etcd* Docker-formatted container that has been available until Red Hat Enterprise Linux Atomic Host 7.3. The new *etcd3* container image provided with this release is a Docker-formatted image. For more information on system containers and how to run *etcd* and *flannel*, see link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/7/single/managing-containers/#running_system_containers[Running System Containers].
+
+* *Image signing (Tech Preview)*
++
+Signing container images on RHEL systems provides a means of validating where a container image came from, checking that the image has not been tampered with, and setting policies to determine which validated images you will allow to use on your systems. For RHEL and RHEL Atomic 7.3, a limited number of tools and registries are available to try out image signing.
++
+Image signing can be done with the "atomic sign" and "atomic push" commands. Using "atomic verify" or "atomic pull" commands, you can verify signed images. With "atomic trust," you can choose which signed images are trusted and can be accepted on the local system. For the current release, image signing is only supported when pushing and pulling between Docker v2 registries (such as the registry software included in the docker-distribution package) and the Docker Hub (docker.io).
++
+To learn more about image signing, see the link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/7/single/managing-containers/#signing_container_images[Image Signing section] in the Red Hat Enterprise Linux Atomic Host Managing Containers Guide.
+
+
+* *Manual Kubernetes Cluster Configuration No Longer Supported*
++
+The Kubernetes software that is available in Red Hat Enterprise Linux and Red Hat Enterprise Linux Atomic Host is packaged and configured differently than the Kubernetes included in OpenShift. We recommend you use the OpenShift version of Kubernetes for permanent setups and production use. The procedure described in link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/7/single/getting-started-with-kubernetes/#get_started_orchestrating_containers_with_kubernetes[Get Started Orchestrating Containers with Kubernetes] should only be used as a convenient way to try out Kubernetes on an all-in-one RHEL or RHEL Atomic Host system.
++
+As of RHEL 7.3, support for the procedure for configuring a Kubernetes cluster (separate master and multiple nodes) directly on RHEL and RHEL Atomic Host *has ended*. For further details on Red Hat support for Kubernetes, see link:https://access.redhat.com/articles/2726491[How are container orchestration tools supported with Red Hat Enterprise Linux?].
+
+* *Cockpit features*
++
+There are several new Cockpit features in this release. Some of these features are:
++
+** Support for two factor password authentication using PAM conversations
+** Webpack is used to build the Cockpit interface
+** Components can require a minimum Cockpit version
+** Forced password reset option enabled
+** Cockpit URLs can be proxied with a configured HTTP path prefix
+** SELinux audit failures can be diagnosed and solutions applied to the system
+** Storage can be configured for Docker containers and images
+
+* *rhevm-guest-agent*
++
+The *rhevm-guest-agent* container image is a Docker-formatted container that is used to run an agent inside of virtual machines on Red Hat Virtualization hosts. Communications between that agent and the Red Hat Virtualization Manager allows that manager to both monitor and change the state of the agent’s virtual machine.
++
+For more information about RHEV Guest Agent, see the  link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/7/single/managing-containers/#using_the_atomic_rhevm_guest_agent_container_image[RHEV Guest Agent Container section] in the Red Hat Enterprise Linux Atomic Host Managing Containers Guide.

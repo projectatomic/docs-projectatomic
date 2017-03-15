@@ -1,0 +1,16 @@
+Red Hat Enterprise Linux Atomic Host is a variation of Red Hat Enterprise Linux 7 optimized to run Linux containers. It has been built to be light-weight and efficient, making it a particularly optimal operating system to use as a container run-time system for cloud environments. RHEL Atomic Host comes with many tools for running containers preinstalled - *docker*, *atomic*, *etcd*, *flannel*. All-in-one *kubernetes* installs are still supported, but Red Hat no longer supports Kubernetes clusters.
+
+Red Hat Enterprise Linux Atomic Host uses rpm-OSTree, an open source tool, to manage bootable, immutable, versioned file system trees made of RPM content. These trees are composed by Red Hat, from packages and the *rpm-ostree* tool replicates the trees atomically. This results in a strategy for upgrade and maintenance that centers around atomic updates. The use of *rpm-ostree* instead of *Yum* to upgrade and maintain software means that Red Hat Enterprise Linux Atomic Host is managed differently than other Red Hat Enterprise Linux 7 variants.
+
+Specifically, when using Red Hat Enterprise Linux Atomic Host, the operating system content is mounted in read-only mode. There are only two writable directories for local system configuration: */etc/* and */var/*. Updates work in the following way: a new bootable file system tree is generated, which shares storage with the current file system tree. When you download the new system tree, the old one is retained in parallel with it. This means that the first, pre-upgrade, version of the file system tree can be atomically restored when needed.
+
+User files that are intended to persist across upgrades, including containers and data, should be placed in the */var/* directory. The operating system itself is stored in the */usr/* directory and is read-only. If you perform a long file listing in the root directory using the command `ls -l /`, you will discover that many of the traditional root-level directories are symbolic links to one of these two locations. For example, the */home/* directory is a symbolic link to the */var/home/* directory. This directory will therefore persist across upgrades.
+
+The default partitioning dedicates most of the available space for the containers, using direct LVM as the storage backend instead of the default loopback as it is on Red Hat Enterprise Linux. Storage is managed the *docker-storage-setup* daemon, which creates two Logical Volumes during installation, *root* for the file system content, and *docker-pool* for the images and containers.
+
+Red Hat Enterprise Linux Atomic Host uses SELinux to provide strong safeguards in multi-tenant environments. The iptables services are available as firewall, iptables is turned off by default.
+
+[NOTE]
+RHEL Atomic Host provides a choice between **docker** and **docker-latest**, but Red Hat does not support running both **docker** and **docker-latest** on the same machine at the same time.
+
+

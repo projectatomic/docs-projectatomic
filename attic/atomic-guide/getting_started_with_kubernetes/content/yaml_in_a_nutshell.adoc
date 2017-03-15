@@ -1,0 +1,198 @@
+=== Overview
+
+YAML -- which stands for “YAML Ain't Markup Language” -- is a human-friendly data serialization standard, similar in scope
+to JSON (Javascript Object Notation). Unlike JSON, there are only a handful of special characters used to represent mappings and bullet lists,
+the two basic types of structure, and indentation is used to represent substructure.
+
+=== Basics
+
+The YAML format is line-oriented, with two top-level parts, _HEAD_ and _BODY_, separated by a line of three hyphens.
+
+....
+HEAD
+---
+BODY
+....
+
+The head holds configuration information and the body holds the data.
+this topic does not discuss the configuration aspect; all the examples here show only the data portion.
+In such cases, the “---” is optional.
+
+The most basic data element is one of:
+
+. A number
+. A Unicode string
+. A boolean value, spelled either true or false
+. In a key/value pair context, a missing value is parsed as nil
+
+Comments start with a *“#”* (hash, U+23) and go to the end of the line.
+
+Indentation is whitespace at the start of the line.
+You are strongly encouraged to avoid *TAB* (U+09) characters and use a series of *SPACE* (U+20) characters, instead.
+
+=== Lists
+
+A list is a series of lines, each beginning with the same amount of indentation, followed by a hyphen, followed by a list element.
+Lists cannot have blank lines.
+For example, here is a list of three elements, the third of which has a comment:
+
+....
+- top shelf
+- middle age
+- bottom dweller   # stability is important
+....
+
+Note: The third element is the string “bottom dweller” and does not include the whitespace between “dweller” and the comment.
+
+*WARNING*: Lists cannot normally nest directly; there should be an intervening mapping (described below).
+In the following example, the list's second element seems, due to the indentation (two *SPACE* characters), to host a sub-list:
+
+....
+- top
+- middle
+  - highish middle
+  - lowish middle
+- bottom
+....
+
+In reality, the second element is actually parsed as a single string.
+The input is equivalent to:
+
+....
+- top
+- middle - highish middle - lowish middle
+- bottom
+....
+
+The newlines and indentation are normalized to a single space.
+
+=== Mappings
+
+To write a mapping (also known as an associative array or hash table), use a `“:”` (colon, `U+3A`) followed by one or more `SPACE` characters
+between the key and the value:
+
+....
+square:   4
+triangle: 3
+pentagon: 5
+....
+
+All keys in a mapping must be unique.
+For example, this is invalid YAML for two reasons: the key square is repeated, and there is no space after the colon following `triangle`:
+
+....
+square:  4
+triangle:3       # invalid key/value separation
+square:  5       # repeated key
+....
+
+Mappings can nest directly, by starting the sub-mapping on the next line with increased indentation.
+In the next example, the value for key `square` is itself a mapping (keys `sides` and `perimeter`), and likewise for the value for key `triangle`.
+The value for key `pentagon` is the number 5.
+
+....
+square:
+  sides:     4
+  perimeter: sides * side-length
+triangle:
+  sides:     3
+  perimeter: see square
+pentagon:    5
+....
+
+The following example shows a mapping with three key/value pairs.
+The first and third values are *nil*, while the second is a list of two elements, “highish middle” and “lowish middle”.
+
+....
+top:
+middle:
+  - highish middle
+  - lowish middle
+bottom:
+....
+
+=== Quotation
+
+Double-quotation marks (also known as “double-quotes”) are useful for forcing non-string data to be interpreted as a string, for preserving whitespace,
+and for suppressing the meaning of colon.
+To include a double-quote in a string, escape it with ``“\”` (backslash, `U+5C`).
+In the following example, all keys and values are strings.
+The second key has a colon in it.
+The second value has two spaces both preceding and trailing the visible text.
+
+....
+"true" : "1"
+"key the second (which has a \":\" in it)" : "  second  value  "
+....
+
+For readability when double-quoting the key, you are encouraged to add whitespace before the colon.
+
+=== Block Content
+
+There are two kinds of block content, typically found in the value position of a mapping element: newline-preserving and folded.
+If a block begins with `“|”` (pipe, `U+7C`), the newlines in that block are preserved.
+If it begins with `“>”` (greater-than, `U+3E`), consecutive newlines are folded into a single space.
+The following example shows both kinds of block content as the values for keys `good-bye` and `anyway`.
+
+....
+hello: world
+
+good-bye: |
+    first line
+
+    third
+    fourth and last
+
+
+anyway: >
+    nothing is guaranteed
+    in life
+lastly:
+....
+
+Using \n (backslash-n) to indicate newline, the values for keys `good-bye` and `anyway` are, respectively:
+
+....
+first line\n\nthird\nfourth and last\n
+
+nothing is guaranteed in life\n
+....
+
+Note that the newlines are preserved in the `good-bye` value but folded into a single space in the `anyway` value.
+Also, each value ends with a single newline, even though there are two blank lines between “fourth and last” and “anyway”, and no blank
+lines between “in life” and “lastly”.
+
+=== Compact Representation
+
+Another, more compact, way to represent lists and mappings is to begin with a start character, finish with an end character,
+and separate elements with `“,”` (comma, `U+2C`).
+
+For lists, the start and end characters are `“[”` (left square brace, `U+5B`) and `“]”` (right square brace, `U+5D`), respectively.
+In the following example, the values in the mapping are identical:
+
+....
+one:
+  - echo
+  - hello, world!
+two: [ echo, "hello, world!" ]
+....
+
+Note: The double-quotes around the second list element of the second value; they prevent the comma from being misinterpreted as an element separator.
+(If we remove them, the list would have three elements: "echo", "hello" and "world!".)
+
+For mappings, the start and end characters are `“{”` (left curly brace, `U+7B`) and `“}”` (right curly brace, `U+7D`), respectively.
+In the following example, the values of both one and two are identical:
+
+....
+one:
+  roses: red
+  violets: blue
+
+two: { roses: red, violets: blue }
+....
+
+=== Additional Information
+
+There is much more to YAML, not described in this topic: directives, complex mapping keys, flow styles, references, aliases, and tags.
+For detailed information, see the link:http://yaml.org/[official YAML site], specifically the latest (
+link:http://yaml.org/spec/1.2/spec.html[version 1.2] at time of writing) specification.

@@ -1,0 +1,152 @@
+This chapter describes measures that you can take to protect the security
+of your containers.
+
+
+=== Dropping Kernel Capabilities
+
+Kernel capabilities can be dropped from the CLI of Docker and in the
+.json file of Kubernetes. Start with nothing and add what you need --
+this is the safest method of determining which kernel capabilities you need.
+
+////
+.[add example here]
+////
+
+////
+http://blog.siphos.be/2013/05/capabilities-a-short-intro/ - this blog
+post by Sven Vermeulen explains the basics of capabilities. Mr Vermeulen
+copies the ping binary to a file called anotherping, demonstrates that it
+does not now have the capability that would permit it to send raw
+packets, assigns it the CAP_NET_RAW capability (which permits the sending
+of raw packets), and demonstrates that anotherping with the CAP_NET_RAW
+capability assigned is able to send raw packets.
+
+Procedure 4.1. Demonstrating Capabilities
+
+. *Title*
+
+  #         cp ping anotherping
+
+. *Title*
+
+  # chcon -t ping_exec_t anotherping
+
+. *Title*
+
+  $ ping -c 1 127.0.0.1     NG 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+     64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.057 ms
+
+. *Title*
+
+  $ anotherping -c 1 127.0.0.1    ping: icmp open socket: Operation not permitted
+
+. title
+
+  # setcap cap_net_raw+ep anotherping
+
+. title
+
+  # anotherping -c 1 127.0.0.1    PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+    64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.054 ms
+////
+
+=== Dropping Root
+
+Never have long-running containers running as root, with the exception of
+*systemd*. There are a couple of approaches for doing this: if you don't need
+systemd, you can use exec to become root and drop your user privileges. Or you
+can use systemd to launch the application you want inside the container with a
+unit file, and the unit file can be used to designate the desired services as
+non-root.
+
+
+=== Exercise care in using the --privileged flag.
+
+Unless your container needs access to the host's hardware, you should not
+use *--privileged*.
+
+////
+=== In-container Network Security and Routing
+SELinux should be possible inside containers soon. (Update, 02 Sep 2015:
+Not so fast. This hasn't happened yet, and the holdup is cultural and not
+technical. We may be waiting for a while for this.)
+
+Containers have their own iptables and routing rules, and you should use
+these to set up a restrict-by-default network situation that allows only
+the networks you expect to access the container to access the container.
+(Note: this paragraph is aspirational and is written in a spirit of hope,
+not out of a desire to give a firm accounting of facts.)
+////
+
+=== suid Content
+
+Sticky-bit content (sticky UID content). This is a word-to-the-wise-type
+note. It is possible to make use of suid content without a privileged
+container, but it is not easy to create suid content without a privileged
+container because marking something as suid is a privileged operation.
+
+
+=== tmpfile
+
+A tmpfile is a file that gets created in */tmp*. This section refers to
+tmpfile attacks. Containers are susceptible to the same race conditions
+and attacks that non-container tmpfiles are susceptible to. Make sure
+that tmpfile content ownership is properly restricted.
+
+
+////
+4.7. How to monitor containers
+------------------------------
+
+TBD
+
+
+4.8. How to centralize logs for containers
+------------------------------------------
+
+TBD
+
+
+4.9. Other Operational Considerations
+-------------------------------------
+
+Where to run "agents" - what is meant by "agents" here? (zdover 10 Aug
+2015).
+
+
+4.10. Running a Single Agent per Container Host
+-----------------------------------------------
+
+run a single agent per container host
+
+
+4.11. Kernel Modules as SPC containers
+--------------------------------------
+
+How things like Kernel modules should also be delivered as SPC containers
+
+
+4.12. Container-aware Performance Tools
+---------------------------------------
+
+Which performance tools are container aware
+
+
+4.13. Debugging Containers
+--------------------------
+
+How to debug containers tjay - What are the most common
+container-debugging cases?
+
+
+4.14. SOS Report
+----------------
+
+Where to run SOS report from - and should we limit this to a container?
+
+
+4.15. ABRT and Other Tools - container aware?
+---------------------------------------------
+
+Are things like ABRT and other tools container aware
+////

@@ -1,0 +1,296 @@
+Signing container images on RHEL systems provides a means of validating where a container image came from, checking that the image has not been tampered with, and setting policies to determine which validated images you will allow to be pulled to your systems. Before you begin, there are a few things you should know about Red Hat container image signing:
+
+* **Tech Preview**: Red Hat container image signing features are considered Tech Preview for the current release. These features are only meant to be used to get an idea of the direction Red Hat is taking toward image signing and should not be use in production environments.
+* **Docker version**: The features described here require at least Docker 1.12.3. For RHEL and RHEL Atomic 7.3.2, you can use the latest docker package (docker-1.12.5). For RHEL and RHEL Atomic 7.3.1, you must install the docker-latest package and run the docker-latest service instead of the docker service. This is described in https://access.redhat.com/articles/2317361[Introducing docker-latest for RHEL 7 and RHEL Atomic Host].
+
+This chapter describes tools and procedures you can use on Red Hat systems to not only sign images, but also consume images that have been signed in these ways:
+
+* *Creating Image Signatures*: By signing images with a private key and sharing a public key generated from it, others can use the public key to authenticate the images you share. The signatures needed to validate the images can be made available from an accessible location (like a Web server) in what is referred to as a "signature store" or made available from a directory on the local filesystem. The actual signature can be created from an image stored in a registry or at the time the image is pushed to a container registry.
+
+* *Verifying Signed Images*: You can check a signed image when it is pulled from a registry.
+
+* *Trusting Images*: Besides determining that an image is valid, you can also set policies that say which valid images you trust to use on your system, as well as which registries you trust to use without validation.
+
+For the current release Red Hat Enterprise Linux and RHEL Atomic Host, there are a limited number of tools and container registries that support image signing. Over time, however, you can expect most features on RHEL systems that pull or store images to support signing. To get you started in the mean time, however, you can use the following features in RHEL:
+
+* *Registries*: Currently, you can use a local container registry (docker-distribution package) and the Docker Hub (docker.io) from RHEL systems to push and pull signed images. For the time being, image signing features are only supported in v2 (not v1) Docker Registries.
+
+* *Image signing tools*: To create image signatures, you can use *atomic sign* (to create a signature from a stored image) or *atomic push* (to create an image signature as you push it to a registry).
+
+* *Image verifying tools*: To verify a signed image, you can use the *atomic trust* command to identify which image registries you trust without verification and which registries require verification. Later, when you pull an image, the *atomic pull* or *docker pull* command will validate the image as it is pulled to the local system.
+
+* *Operating systems*: The image signing and verification features described here are supported in Red Hat Enterprise Linux Server and RHEL Atomic Host systems, version 7.3.1 and later.
+
+For a more complete description of Red Hat container image signing, see:
+
+https://access.redhat.com/articles/2750891[Container Image Signing Integration Guide]
+
+=== Getting Container Signing Software
+If you are using a RHEL Atomic Host 7.3.2 system (or later), the tools you need to sign, trust and verify images are already included. If you are using a RHEL 7.3 Server system, you need to add some extra software, then start the docker-latest service.
+
+Most container-related software for RHEL server is in the rhel-7-server-extras-rpms yum repository. So, on your RHEL 7.3 server system, you should enable that repository, install packages, and start the docker service as follows:
+
+....
+# subscription-manager repos --enable=rhel-7-server-extras-rpms
+# yum install skopeo docker atomic
+# systemctl enable docker; systemctl start docker
+....
+The docker service should now be running and ready for you to use.
+
+
+=== Creating Image Signatures
+
+Image signing in this section is broken down into the following steps:
+
+* *GPG keys*: Create GPG keys for signing images.
+* *Sign images*: Choose from either creating a signature from an image already in a container registry or creating a signature as you push it to a container registry.
+
+==== Create GPG Keys
+To sign container images on Red Hat systems, you need to have a private GPG key and a public key you create from it. If you don't already have GPG keys you want to use, you can create them with the *gpg2 --gen-key* command. This procedure was done from a terminal window on a GNOME desktop as the user who will sign the images:
+
+1. *Create private key*: Use the following command to interactively add information needed to create the private key. You can use defaults for most prompts, although you should properly identify your user name, email address, and add a comment. You also must add a passphrase when prompted.
++
+....
+$ gpg2 --gen-key
+Please select what kind of key you want:
+Your selection? 1
+What keysize do you want? (2048) 2048
+Please specify how long the key should be valid.
+         0 = key does not expire
+Key is valid for? (0) 0
+Key does not expire at all
+Is this correct? (y/N) y
+Real name: Joe Smith
+Email address: jjsmith@example.com
+Comment: Image Signing Key
+You selected this USER-ID:
+    "Joe Smith (Image Signing Key) <jjsmith@example.com>"
+Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit? O
+You need a Passphrase to protect your secret key.
+gpg: /home/jsmith/.gnupg/trustdb.gpg: trustdb created
+gpg: key D3F46FFF marked as ultimately trusted
+public and secret key created and signed.
+....
+
++
+You will need the passphrase later, when you attempt to sign an image. Anyone with access to your private key and passphrase will be able to identify content as belonging to you.
+
+1. *Create entropy*: You need to generate activity on your system to help produce random data that will be used to produce your key. This can be done by moving windows around or opening another Terminal window and running a variety of commands, such as ones that write to disk or read lots of data. Once enough entropy is generated, the gpg2 command will exit and show information about the key just created.
+
+1. *Create public key*: Here's an example of creating a public key from that private key:
++
+....
+$ gpg2 --armor --export --output mysignkey.gpg jjsmith@example.com
+....
+
+1. *List keys*: Use the following command to list your keys.
++
+....
+$ gpg2 --list-keys
+/home/jsmith/.gnupg/pubring.gpg
+-------------------------------
+pub   2048R/D3F46FFF 2016-10-20
+uid                  Joe Smith (Image Signing Key) <jjsmith@example.com>
+sub   2048R/775A4344 2016-10-20
+....
+
+At this point, the private key you created is available to use from this user account to sign images and the public key (**mysignkey.gpg**) can be shared with others for them to use to validate your images. Keep the private key secure. If someone else has that key, they could use it to sign files as though those files belonged to you.
+
+==== Creating an Image Signature
+With your private key in place, you can begin preparing to sign your images. The steps below show two different ways to sign images:
+
+* *From a repository*: You can create a signature for an image that is already in a repository using **atomic sign**.
+* *Image at push time*: You can tag a local image and create an image signature as you push it to a registry using **atomic push**.
+
+Image signing requires super user privileges to run the *atomic* and *docker* commands. However, when you sign, you probably want to use your own keys. To take that into account, when you run the *atomic* command with *sudo*, it will read keys from your regular user account's home directory (not the root user's directory) to do the signing.
+
+=== Set up to do Image Signing
+If you are going to sign a lot of images on a personal system, you can identify signing information in your */etc/atomic.conf* file. Once you add that information to *atomic.conf*, the *atomic* command assumes that you want to use that information to sign any image you push or sign. For example, for a user account jjsmith with a default signer of jjsmith@example.com, you could add the following lines to the */etc/atomic.conf* file so that all images you push or sign would be signed with that information by default:
+
+....
+default_signer: jjsmith@example.com
+gnupg_homedir: /home/jjsmith/.gnupg
+....
+
+If you want to use a different signer or signing home directory, to override those default values, you can do that later on the *atomic* command line using the *--sign-by* and *--gnupghome* options, respectively. For example, to have jjones@example.com and /home/jjones.gnupg used as the signer and default gnupg directory, type the following on the atomic command line:
+
+....
+$ sudo atomic push --sign-by jjones@example.com   \
+                   --gnupghome /home/jjones.gnupg \
+                   docker.io/wherever/whatever
+....
+
+=== Creating a Signature for an Image in a Repository
+You can create an image signature for an image that is already pushed to a registry using the *atomic sign* command. Use *docker search* to find the image, then *atomic sign* to create a signature for that image.
+
+*IMPORTANT*: The image signature is created using the exact name you enter on the *atomic sign* command line. When someone verifies that image against the signature later, they must use the exact same name or the image will not be verified.
+
+1. *Find image*: Find the image for which you want to create the signature using the **docker search** command:
++
+....
+$ sudo docker search docker.io/jjsmith/mybusybox
+INDEX       NAME                          DESCRIPTION   STARS     OFFICIAL   AUTOMATED
+docker.io   docker.io/jjsmith/mybusybox                 0....
+....
+
+1. *Create the image signature*: Choose the image you want to sign (jjsmith/mybusybox in this example). To sign it with the default signer and home directory entered in */etc/atomic.conf*, type the following:
++
+....
+$ sudo atomic sign docker.io/jjsmith/mybusybox
+Created: /var/lib/atomic/sigstore/docker.io/jjsmith/mybusybox@sha256:9393222c6789842b16bcf7306b6eb4b486d81a48d3b8b8f206589b5d1d5a6101/signature-1
+....
+
+When you are prompted for a passphrase, enter the passphrase you entered when you created your private key. As noted in the output, you can see that the signature was created and stored in the */var/lib/atomic/sigstore* directory on your local system under the registry name, user name, and image name (*docker.io/jjsmith/mybusybox*sha256:...*).
+
+=== Creating an Image Signature at Push Time
+To create an image signature for an image at the time you push it, you can tag it with the identity of the registry and possibly the username you want to be associated with the image. This shows an example of creating an image signature at the point that you push it to the Docker Hub (docker.io). In this case, the procedure relies on the default signer and GNUPG home directory assigned earlier in the */etc/atomic.conf* file.
+
+1. *Tag image*: Using the image ID of the image, tag it with the identity of the registry to which you want to push it.
++
+....
+$ sudo docker tag hangman docker.io/jjsmith/hangman:latest
+....
+
+1. *Push and sign the image*: The following command creates the signature as the image is pushed to docker.io:
++
+....
+$ sudo atomic push -t docker docker.io/jjsmith/hangman:latest
+Registry Username: jjsmith
+Registry Password: *****
+Copying blob sha256:5f70bf18...
+Signing manifest
+Writing manifest to image destination
+Storing signatures
+....
+When prompted, enter the passphrase you assigned when you created your private key. At this point, the image should be available from the repository and ready to pull.
+
+=== Sharing the Signature Store
+The signatures you just created are stored in the */var/lib/atomic/sigstore* directory. For the purposes of trying out signatures, you can just use that signature store from the local system. However, when you begin sharing signed images with others and have them validate those images, you would typically share that signature store directory structure from a Web server or other centrally available location. You would also need to share the public key associated with the private key you used to create the signatures.
+
+For this procedure, you could just copy your public key to the */etc/pki/containers* directory and use the signature store from the local */var/lib/atomic/sigstore* directory. For example:
+
+....
+$ sudo mkdir /etc/pki/containers
+$ sudo cp mysignkey.gpg /etc/pki/containers/
+....
+
+As for the location of the signature store, you can assign that location when you run an *atomic trust add* command (shown later). Or you can edit the */etc/containers/registries.d/default.yaml* file directly and identify a value for the sigstore setting (such as, *sigstore: file:///var/lib/atomic/sigstore*).
+
+=== Validating and Trusting Signed Images
+Using the *atomic trust* command, you can identify policies that determine which registries you trust to allow container images to be pulled to your system. To further refine the images you accept, you can set a trust value to accept all images from a registry or accept only signed images from a registry. As part of accepting signed images, you can also identify the location of the keys to use to validate the images.
+
+The following procedure describes how to show and change trust policies related to pulling images to your system with the atomic command.
+
+1. *Check trust values*: Run this command to see the current trust value for pulling container images with the *atomic* command:
++
+....
+$ sudo atomic trust show
+* (default)                         accept
+....
++
+When you start out, the trust default allows any request to pull an image to be accepted.
+
+1. *Set default to reject*: To limit pulled images to only accept images from certain registries, you can start by changing the default to reject as follows:
++
+....
+$ sudo atomic trust default reject
+$ sudo atomic trust show
+* (default)                         reject
+$ sudo atomic pull docker.io/jjsmith/myfedora
+Image docker.io/jjsmith/myfedora is being pulled to docker ...
+FATA[0000] Source image rejected: Running image docker://jjsmith/myfedora:latest is rejected by policy.
+....
++
+You can see that the default is now to reject all requests to pull images, so an attempt to pull a container image fails.
+
+1. *Add trusted registry with signatures*: This example identifies the docker.io (Docker Hub) registry as being a registry from which the local system will be able to pull signed images:
++
+....
+$ sudo atomic trust add docker.io              \
+  --pubkeys /etc/pki/containers/mysignkey.gpg  \
+  --sigstore file:///var/lib/atomic/sigstore   \
+  --type signedBy
+....
++
+Note that atomic will look in the */etc/pki/containers/mysignkey.gpg* file on the local system for keys that can be used to validate a pulled container and use the local */var/lib/atomic/sigstore* directory to find signatures.
+
+1. *Add trusted registry with no signature requires*: This example allows any image to be pulled from *registry.access.redhat.com* (the Red Hat registry) without require any validation:
++
+....
+$ sudo atomic trust add registry.access.redhat.com --type insecureAcceptAnything
+$ sudo atomic trust show
+docker.io                           signed   jjsmith@example.com 
+registry.access.redhat.com          accept   
+* (default)                         reject
+....
++
+Notice that *atomic trust show* shows that only signed images from docker.io and any image from registry.access.redhat.com will be accepted. All other images will be rejected.
+
+1. *Pull and verify image*: At this point, you should be able to pull any images from *registry.access.redhat.com* or signed images from *docker.io* for which you have the signature files and public keys. To pull and verify a signed image, with your signature files and public keys in place, type the following:
++
+....
+$ sudo atomic pull docker.io/jjsmith/hangman:latest
+Image docker.io/jjsmith/hangman:latest is being pulled to docker ...
+Pulling docker.io/jjsmith/hangman:latest ...
+Copying blob sha256:56bec22e355981d8ba0878c6c2f23b21f422f30ab0aba188b54f1ffeff59c190
+ 479.13 KB / 652.49 KB [========================================>--------------]
+Copying config sha256:074255469aac02045a5a5c34ac12223827ecafedcc0d12928b019af8d4384e54
+ 0 B / 1.67 KB [---------------------------------------------------------------]
+Writing manifest to image destination
+Storing signatures
+....
+
++
+As an alternative, you could use the *docker-latest* command to pull the image and verify the signature:
+
++
+....
+$ sudo docker-latest pull docker.io/jjsmith/hangman:latest
+Trying to pull repository docker.io/jjsmith/hangman ... 
+sha256:65a2d6bb6905db31fdb0c468c1f90594d3337db368a1d83d20501c5af2e5afec: Pulling from docker.io/jjsmith/hangman
+Digest: sha256:65a2d6bb6905db31fdb0c468c1f90594d3337db368a1d83d20501c5af2e5afec
+Status: Downloaded newer image for docker.io/jjsmith/hangman:latest
+....
+
+=== Understanding Image Signing Configuration Files
+The image signing process illustrated in this chapter resulted in several configuration files being created or modified. Instead using the *atomic* command to create and modify those files, you could edit those files directly. Here are examples of the files created in this chapter.
+
+==== policy.json file
+The *atomic trust* command modifies settings in the */etc/containers/policy.json* file. Here is the content of that file that resulted from changing the default trust policy to reject, accepting all requests to pull images from the *registry.access.redhat.com* registry without verifying signatures, and accepting requests to pull images from the *docker.io* registry that are signed by GPGKeys in the */etc/pki/containers/mysignkey.gpg* file:
+
+....
+    "default": [
+        {
+            "type": "reject"
+        }
+    ],
+    "transports": {
+        "docker": {
+            "registry.access.redhat.com": [
+                {
+                    "type": "insecureAcceptAnything"
+                }
+            ],
+            "docker.io": [
+                {
+                    "keyType": "GPGKeys",
+                    "type": "signedBy",
+                    "keyPath": "/etc/pki/containers/mysignkey.gpg"
+                }
+            ]
+        }
+    }
+}
+....
+
+==== docker.io.yaml
+Settings added from the *atomic trust add* command line when adding trust settings for the *docker.io* registry were stored in a new file that was created called */etc/containers/registries.d/docker.io.yaml*. That command line set the location of the signature store:
+
+....
+docker:
+  docker.io:
+    sigstore: file:///var/lib/atomic/sigstore/
+....
+
+The settings in that *docker.io.yaml* file will override default setting on your system. Default signing settings are stored in the */etc/containers/registries.d/default.yaml* file. 
+

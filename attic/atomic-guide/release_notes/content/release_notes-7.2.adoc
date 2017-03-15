@@ -1,0 +1,79 @@
+=== Atomic Host
+
+*OStree update*:
+
+New Tree Version: 7.2 (hash: ec85fba1bf789268d5fe954aac09e6bd58f718e47a2fcb18bf25073b396e695d) +
+Changes since Tree Version 7.1.6 (hash: 23d96474f6775c27cf258e9872330b23f20e80ff4e0b61426debd00ca11a953f)
+
+=== Extras
+
+*Updated packages*:
+
+* atomic-1.6-6.gitca1e384.el7
+* cockpit-0.77-3.1.el7
+* docker-1.8.2-8.el7
+* flannel-0.5.3-8.el7
+* kubernetes-1.0.3-0.2.gitb9a88a7.el7
+* python-docker-py-1.4.0-118.el7
+* python-websocket-client-0.32.0-116.el7
+* storaged-2.2.0-3.el7 *
+
+*New packages*:
+
+* docker-distribution-2.1.1-3.el7 *
+
+The asterisk (*) marks packages which are available for Red Hat Enterprise Linux only.
+
+==== Container Images
+
+*Updated*:
+
+*	Red Hat Enterprise Linux Container Image (rhel7/rhel)
+*	Red Hat Enterprise Linux Atomic Tools Container Image (rhel7/rhel-tools)
+*	Red Hat Enterprise Linux Atomic rsyslog Container Image (rhel7/rsyslog)
+*	Red Hat Enterprise Linux Atomic sadc Container Image (rhel7/sadc)
+*	Red Hat Enterprise Linux Atomic cockpit-ws Container Image (rhel7/cockpit-ws)
+
+*New*:
+
+*	Red Hat Enterprise Linux Atomic etcd Container Image (rhel7/etcd)
+*	Red Hat Enterprise Linux Atomic Kubernetes-controller Container Image (rhel7/kubernetes-controller-mgr)
+*	Red Hat Enterprise Linux Atomic Kubernetes-apiserver Container Image (rhel7/kubernetes-apiserver)
+*	Red Hat Enterprise Linux Atomic Kubernetes-scheduler Container Image (rhel7/kubernetes-scheduler)
+
+=== New Features
+
+* *docker has been upgraded to version 1.8.2*
++
+Notable changes:
++
+** docker now displays a warning message if you are using the loopback device as a backend storage option.
+** The *docker info* command now shows the rpm version of the client and server.
+** The default mount propagation is `Slave` instead of `Private`. This allows volume (bind) mounts, to be altered on the host and the new mounts show up inside of the container.
+** The **--add-registry** and **--block-registry** options have been added. This allows additional registries to be specified in addition to **docker.io** in _/etc/sysconfig/docker_.
+** You can now inspect the content of remote repositories and check for newer versions. This functionality is implemented in the **atomic verify** command from the atomic command-line tool.
+
+* *flannel has been upgraded to version 0.5.3*
++
+Notable changes:
++
+** flannel's network prefix was changed from _coreos.com/network_ to _atomic.io/network_.
+** flannel's behavior when the first ping packet was lost has been fixed.
+** The _flanneld.service_ now starts after the network is ready.
+
+* *Cockpit has been rebased to version 0.77*
++
+Notable changes:
++
+** Cockpit now displays the limit for the number of supported hosts when adding servers to the dashboard.
+** Cleaner bookmarkable URLs.
+** Includes basic SSH key authentication functionality.
+** Basic interactions with multipath storage have been fixed.
+** When password authorization is not possible, Cockpit displays an informative message.
+** Authentication now works when embedding Cockpit.
+
+* *Removed systemd socket activation*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1189052
++
+For security reasons, systemd socket activation, which was supported in earlier versions of docker, has been removed. Now, it is not recommended to use the docker group as a mechanism for talking to the docker daemon as a non-privileged user. Instead, set up sudo for this type of access. If the docker daemon is not running after the upgrade, create the _/etc/sysconfig/docker.rpmnew_ file, add any local customization to it and replace _/etc/sysconfig/docker_ with it. Additionally, remove the `-H fd://` line from _/etc/sysconfig/docker_ if it is present.

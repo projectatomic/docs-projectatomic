@@ -1,0 +1,975 @@
+This chapter explains how to install Red Hat Enterprise Linux Atomic Host in several different virtualization environments and public cloud services. Before you start following the procedures below, download the appropriate ISO image for your environment as described in link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Installation_Guide/chap-download-red-hat-enterprise-linux.html[Downloading Red Hat Enterprise Linux] from the _Red Hat Enterprise Linux 7 Installation Guide_.
+
+=== Linux Hypervisor Installation with qcow2 Media
+
+The following sections describe the installation of Red Hat Enterprise Linux Atomic Host using a `qcow2` disk image in a Linux hypervisor environment on a Red Hat Enterprise Linux 7 system.
+
+*Overview*
+
+Red Hat Enterprise Linux Atomic Host is available as a fully-configured disk image ready to be used with a Linux hypervisor. This variant is distributed as a compressed `gzip` archive. Decompress it using the following command:
+
+....
+# gzip -d rhel-atomic-host-7.qcow2.gz
+....
+
+The resulting uncompressed `qcow2` image can be used to create an instance of Red Hat Enterprise Linux Atomic Host. This means that the file will be written to once you start the virtual machine; after you use it to start one instance, you can not reuse it to start another one or reconfigure it using `cloud-init`. Therefore, you should back up the original `qcow2` file before starting the first instance. You can use the `qemu-img` command to create a `snapshot` of the unmodified file:
+
+....
+# qemu-img create -f qcow2 -o backing_file=rhel-atomic-host-standard.qcow2 atomic-beta-instance-0.qcow2
+....
+
+This command creates a snapshot named `rhel-atomic-host-standard.qcow2` which is the original, unmodified image, and a new file called `atomic-beta-instance-0.qcow2`, which can be used for the actual virtual machine.
+
+==== Preparing for Installation
+
+The installation configuration options are set with a pair of cloud-init configuration files:
+
+* `meta-data`
++
+A plain text file which provides information that identifies the instance of Red Hat Enterprise Linux Atomic Host being installed. Its contents should be similar to the following example:
+
+....
+instance-id: Atomic0
+local-hostname: atomic-00
+....
++
+The `instance-id` can be any identifying name and the `local-hostname` should be a host name that follows your site standards.
+
+* `user-data`
++
+A plain text file which provides information about users on the system. This information will be used to enable access to the Red Hat Enterprise Linux Atomic Host instance. by default, the `root` user is password-locked; therefore, if you do not create the `user-data` file, you will not be able to log in.
+
+An example of a `user-data` file is below:
+
+....
+#cloud-config
+password: atomic
+chpasswd: {expire: False}
+ssh_pwauth: True
+ssh_authorized_keys:
+- ssh-rsa AAA...SDvz user1@yourdomain.com
+- ssh-rsa AAB...QTuo user2@yourdomain.com
+....
++
+[NOTE]
+The first line of the example (`#cloud-config`) is not a comment or a command example - it is a mandatory line in the configuration file.
++
+This example enables the `cloud-user` user to log in either with a password or an `SSH` key. The use of both methods is possible, but not required. An initial password is set on the `password` line; when the user logs in for the first time on this instance, they will be prompted to change their password as defined on the `chpasswd` line. Forcing the user to change their password after the first login is recommended because initially the password is stored in plain text.
++
+The final four lines in the example configure remote login using `SSH`. The `ssh_pwauth: True` line enables `SSH` using a password, and the `ssh_authorized_keys` starts a block of one or more authorized public keys. Keys described in this file will be added to the `~/.ssh/authorized_keys` file. Each authorized key must be on a separate line and start with two spaces followed by a hyphen (`-`) and another space.
+
+For additional information about these files, see the xref:setting-up-cloud-init[Setting up cloud-init].
+
+Once you have created both of the files described above, you must package them into the ISO image. This image will then be used as a virtual configuration CD on the virtual machine. To package the files into an image, use the following command:
+
+....
+# genisoimage -output atomic0-cidata.iso -volid cidata -joliet -rock user-data meta-data
+....
+
+This will create a new ISO image file named `atomic0-cidata.iso`.
+
+==== Starting Red Hat Enterprise Linux Atomic Host for the First Time
+
+After you unpacked the distributed `qcow2` image and created a configuration image as described in the previous section, you can create the virtual machine and begin the installation process. This section will describe creating an instance using the `virt-install` command; it is also possible to use the `virt-manager` graphical interface. Both are documented in the link:https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Virtualization_Deployment_and_Administration_Guide/index.html[Red Hat Enterprise Linux 7 Virtualization Deployment and Administration Guide]. See also the link:https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Virtualization_Getting_Started_Guide/index.html[Red Hat Enterprise Linux 7 Virtualization Getting Started Guide] for introduction to virtualization on Red Hat Enterprise Linux 7.
+
+The following command will create a new virtual machine using the `qcow2` image distributed by Red Hat and the configuration image you have created earlier:
+
+....
+# virt-install --import --name Atomic0 --ram 4096 --vcpus 2 --disk path=/path/to/rhel-atomic-host-standard.qcow2,format=qcow2,bus=virtio --disk path=/path/to/atomic0-cidata.iso,device=cdrom --network bridge=virbr0 --graphics vnc
+....
+
+The two `--disk-path=` options specify locations of the image files and device types which should be created (a `virtio` device for the main image and a virtual CD drive for the configuration image). It also assigns 4 GB of RAM (`--ram 4096`) and 2 virtual CPUs (`--vcpus 2`) to the virtual machine, sets up a VNC graphical interface (`--graphics vnc`) and a network bridge (`--network bridge=virbr0`). You can change these settings to suit your needs, but you must always use both of the image files.
+
+[NOTE]
+Currently, `DHCP` is the preferred network configuration method for use with Red Hat Enterprise Linux Atomic Host. Network settings can be changed by editing configuration files in the `/etc` directory after the initial boot.
+
+[NOTE]
+If you want to have your virtual machine accessible outside of the host machine. You should use a direct network interface. For example, you can replace `--network bridge=virbr0` with `--network type=direct,source=em1`, where `em1` is the name of an active network interface on the host system.
+
+At this point, you can log into the Red Hat Enterprise Linux Atomic Host virtual machine using the credentials you set up in your `user-data` file. To access a `root` shell, use the `sudo -i` command. To connect to the virtual machine's console from the host system, use the following command:
+
+....
+# virsh console Atomic0
+....
+
+Replace `Atomic0` with the name of the virtual machine - the `--name` option of the `virt-install` command.
+
+For information about working with your new Red Hat Enterprise Linux Atomic Host instance, see the link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/7/single/getting-started-guide/[Red Hat Enterprise Linux Atomic Host 7 Getting Started Guide].
+
+=== Red Hat Enterprise Virtualization Environment Installation
+
+The following sections explain how to use Red Hat Enterprise Virtualization (RHEV) to create virtual machines that run RHEL Atomic Host with `.ova` files and an ISO files.
+
+*.ova-based Installation*
+
+The `.ova` based installation method allows for rapid deployment of a Red Hat Enterprise Linux Atomic Host installation, but permits less customization than does the ISO-based installation described in xref://link to next section from rhev
+
+1. Acquire the RHEL Atomic Host `.ova` media from link:https://access.redhat.com/downloads/content/271/ver=/rhel---7/7.2.6-1/x86_64/product-software[Download Red Hat Enterprise Linux].
+
+2. Copy the `.ova` file to the Red Hat Enterprise Virtualization Manager.
+
+3. Use the `rhevm-image-uploader` to upload the `.ova` file to the Export storage domain.
+
+4. Create instances of Red Hat Enterprise Linux from the `.ova` files uploaded to your Red Hat Enterprise Virtualization instance.
+
+*ISO-based Installation*
+
+The `.iso` based installation method allows for greater customization of the installation than does the `.ova` based installation method, but requires the configuration of the virtual machine hosting the Atomic environment.
+
+1. Acquire the Red Hat Enterprise Linux Atomic Host installation media from link:https://access.redhat.com/downloads/content/271/ver=/rhel---7/7.2.6-1/x86_64/product-software[Download Red Hat Enterprise Linux]. and copy it to the Red Hat Enterprise Virtualization Manager's file system.
+
+2. Use `rhevm-image-uploader` to add the ISO image to the storage domain of your Red Hat Enterprise Virtualization environment.
+
+3. Attach the uploaded Red Hat Enterprise Linux Atomic Host ISO image to a new virtual machine and install Red Hat Enterprise Linux Atomic Host on that virtual machine.
+
+4. Use the newly-created Red Hat Enterprise Linux Atomic Host virtual machine.
+
+For more details, see the documentation set for link:https://access.redhat.com/documentation/en/red-hat-virtualization/[Red Hat Enterprise Virtualization].
+
+==== Installing Red Hat Enterprise Linux Atomic Host from an .ova File
+
+The following section explains how to install Red Hat Enterprise Linux Atomic Host in Red Hat Enterprise Virtualization, from an `.ova` (Open Virtualization Appliance) source. This operation consists of a procedure in three stages. The first stage describes how to unpack the `.ova` file in the export storage domain of your Red Hat Enterprise Virtualization environment and how to set permissions so that Red Hat Enterprise Virtualization has ownership of the unpacked files. The second stage describes how to import the virtual machine template from the export domain into the Red Hat Enterprise Virtualization environment. The third stage describes how to create a virtual machine from the imported template.
+
+*Importing the .ova File with rhevm-image-uploader*
+
+This procedure explains how to use `rhevnm-image-uploader` to upload the virtual machine template of the Red Hat Enterprise Linux Atomic Host to the Export storage domain. Perform the following steps from within the Red Hat Enterprise Virtualization Manager environment.
+
+1. Transfer the `.ova` file to the Red Hat Enterprise Virtualization Manager.
+
+....
+[a computer that is not the RHEV Manager]# scp filename.ova root@rhevm.hostname.com:/
+....
+
+2. Log in to the Red Hat Enterprise Virtualization Manager machine as root.
+
+....
+[a computer that is not the RHEV Manager]# ssh root@rhevm.hostname.com
+....
+
+3. Move to the directory to which you transferred the `.ova` file. In this example we assume that the directory is root (/):
+
+....
+[RHEVM]# cd /
+....
+
+4. Use the following command to upload the `.ova` file to the Export storage domain:
+
+....
+[RHEVM]# rhevm-image-uploader -N imagename -e Export upload filename.ova
+....
+
+Include `-N imagename` to give the image a human-readable file name. Otherwise, the name of the image will be a long alphanumeric string. Also substitute the name of your export domain for "Export" and the name of the .ova file for "filename.ova".
+
+5. Provide the REST API password for the admin@internal oVirt engine user when prompted. The upload may take some time, depending on the size of the uploaded file. The upload succeeds silently, returning you to a command prompt when it is complete.
+
+*Importing the Virtual Machine Template into Red Hat Enterprise Virtualization*
+
+After the `.ova` file has been unpacked and the virtual machine template that it contained has its permissions set so that Red Hat Enterprise Virtualization can operate on it, you must import the virtual machine template into the Red Hat Enterprise Virtualization environment through the Administration Portal user interface. When this procedure is complete, it will be possible to create virtual machines from the imported template.
+
+1. Sign in to the Red Hat Enterprise Virtualization Manager Administrator Portal as *admin*.
+
+2. In the Red Hat Enterprise Virtualization Manager User Interface, click the *Storage* tab in the Navigation Pane (the pane at the top of the interface).
+
+3. In the Red Hat Enterprise Virtualization Manager User Interface, click the name of the Export Domain in the Navigation Pane.
+
+4. In the Red Hat Enterprise Virtualization Manager User Interface, click the *Template Import* tab in the Details Pane (the pane at the bottom of the interface).
+
+5. In the Red Hat Enterprise Virtualization Manager User Interface, in the *Details Pane* (the pane at the bottom of the interface), click the name of the file you plan to import.
+
+6. In the Red Hat Enterprise Virtualization Manager User Interface, click *Import* at the top left of the Details Pane.
+
+7. In the *Import Template* window, click the name of the virtual machine you plan to import.
+
+8. In the *Import Template* window, click *OK* in the bottom right corner.
+
+*Adding a cloud-init ISO to the ISO Domain*
+
+1. Create a cloud-init ISO by following the instructions in the xref:setting-up-cloud-init[Setting cloud-init] section. // put an xref
+
+2. From a machine remote to the RHEV Manager machine in your Red Hat Enterprise Virtualization environment, use `scp` to copy the cloud-init ISO to the file system of the RHEV Manager machine in the Red Hat Enterprise Virtualization Environment.
+
+....
+[a computer that is not the RHEV Manager]# scp atomic-cloud.iso root@rhevm.hostname.com:/
+....
+
+3. Log in to the Red Hat Enterprise Virtualization Manager machine as `root`.
+
+....
+[a computer that is not the RHEV Manager]# ssh root@rhevm.hostname.com
+....
+
+4. Move to the directory to which you uploaded the `atomic-cloud.iso`:
+
+....
+[RHEVM]# cd /
+....
+
+5. Use `rhevm-iso-uploader` to upload the cloud-init ISO to the ISO domain.
+
+....
+[RHEVM]# rhevm-iso-uploader --iso-domain=domain_name upload atomic-cloud.iso
+....
+
+6. Sign in to the Red Hat Enterprise Virtualization Manager Administrator Portal as *admin*.
+
+7. In the Red Hat Enterprise Virtualization Manager User Interface, select the *Storage* tab in the *Navigation* pane.
+
+8. In the *Details* pane (the pane at the bottom of the interface), select the *Images* tab.
+
+9. Confirm that the `.iso` file is present in the ISO domain (it will appear in a list in the *Images* subtab of the *Details* pane if it is present).
+
+*Creating a Virtual Machine from the Imported Template*
+
+Now that your Red Hat Enterprise Linux Atomic Host virtual machine template has been unpacked and imported to your Red Hat Enterprise Virtualization environment and your cloud-init ISO file is present in the Red Hat Enterprise Virtualization ISO domain, you can create Red Hat Enterprise Linux Atomic Host virtual machines using the following procedure.
+
+1. Log in to the Red Hat Enterprise Virtualization Manager user interface.
+
+2. Open the *Virtual Machines* tab in the *Navigation* pane.
+
+3. In the Navigation Pane of the Red Hat Enterprise Virtualization User Interface, click *New VM*.
+
+4. In the *New Virtual Machine* window, in the *Based on Template* drop-down menu, select the name of the Red Hat Enterprise Linux Atomic Host template that you imported earlier.
+
+5. In the *New Virtual Machine* window, fill out the "Name", "Description", and "Comment" fields.
+
+6. In the *Boot Options* tab of the *New Virtual Machine* window, select the "Attach CD" check box, and select the name of the cloud-init ISO that contains the user credentials you want to use on this virtual machine.
+
+7. Click *OK*.
+
+==== Installing Red Hat Enterprise Linux Atomic Host from an ISO Image
+
+*Uploading ISO*
+
+[NOTE]
+This section pertains only to the procedure describing the installation of a Red Hat Enterprise Linux Atomic Host system from an ISO image. This section does not pertain to the creation of a Red Hat Enterprise Linux Atomic Host system from an `.ova` file.
+
+1. Transfer the ISO file to the file system of the Red Hat Enterprise Virtualization Manager.
++
+....
+[a computer that is not the RHEV Manager]# scp filename.iso root@rhevm.hostname.com:/
+....
+
+2. Log in to the back end of the Red Hat Enterprise Virtualization Manager as root. Note that this does not mean that you should log in to the Red Hat Enterprise Virtualization Manager Administrator Portal.
++
+....
+[a computer that is not the RHEV Manager]# ssh root@rhevm.hostname.com
+....
+
+3. Move to the directory to which you transferred the ISO file:
++
+....
+[RHEVM]# cd /
+....
+
+4. Determine the name of the ISO storage domain on your Red Hat Enterprise Virtualization Manager. In the example here, the name of the ISO storage domain is `ISO_DOMAIN`:
++
+....
+# rhevm-iso-uploader list
+ISO Storage Domain Name   | Datacenter                | ISO Domain Status
+ISO_DOMAIN                | Default                   | active
+....
+
+5. Use *rhevm-iso-uploader* to upload the Red Hat Enterprise Linux Atomic Host installation ISO image to the Red Hat Enterprise Virtualization storage domain:
++
+....
+[RHEVM]# rhevm-iso-uploader upload -i ISO_DOMAIN filename.iso
+....
+
+For more information on uploading ISO files to ISO domains in Red Hat Enterprise Virtualization, see the link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Virtualization/3.5/html/Installation_Guide/Populating_the_ISO_Storage_Domain1.html[Red Hat Enterprise Virtualization Installation Guide].
+
+*Creating a Red Hat Enterprise Linux Atomic Virtual Machine*
+
+1. Log in to the Red Hat Enterprise Virtualization Manager.
+
+2. Click the *Virtual Machines* tab.
+
+3. Click the *New VM* button to open the *New Virtual Machine* window.
+
+4. Click the *Show Advanced Options* button in the lower left corner of the *New Virtual Machine* window.
+
+5. On the *General* tab, fill in the Name and Operating System fields. You can accept the default settings for other fields, or change them if required.
+
+6. Click *Boot* Options in the menu on the left of the *New Virtual Machine* window.
+
+7. In the *Boot* Sequence menu, select *CD-ROM* in the *First Device* drop-down menu.
+
+8. In the *Boot Sequence* menu, select *Hard Disk* in the *Second Device* drop-down menu.
+
+9. Select the *Attach CD* check box.
+
+10. In the drop-down menu to the right of the *Attach CD* check box, select the name of the Red Hat Enterprise Linux Atomic Host installation ISO.
+
+11. Click *OK* in the bottom right of the *New Virtual Machine* window.
+
+12. The *New Virtual Machine - Guide Me* window opens, displaying two buttons: *Configure Network Interfaces* and *Configure Virtual Disks*.
+
+13. Click *Configure Network Interfaces*.
+
+14. The *New Network Interface* window opens. The default values in this window are sufficient to create a virtual network interface for the virtual machine.
+
+15. Click *OK* in the bottom right of the *New Network Interface* window.
+
+16. In the *New Virtual Machine - Guide Me* window, click the *Configure Virtual Disks* button.
+
+17. The *New Virtual Disk* window opens. In the *Size (GB)* field, enter the size in gigabytes of your virtual hard drive.
+
+18. Click *OK* in the bottom right of the *New Virtual Disk* window
+
+19. In the *New Virtual Machine - Guide Me* window, click *Configure Later* in the bottom right.
+
+=== Red Hat Enterprise Linux OpenStack Platform Installation
+
+This section explains how to launch an instance of Red Hat Enterprise Linux Atomic Host on the Red Hat Enterprise Linux OpenStack Platform using a `QCOW2` image. Before you start the procedure, download the `QCOW2` image from here: link:access.redhat.com/downloads/content/271/ver=/rhel---7/7.2.6-1/x86_64/product-software[Download Red Hat Enterprise Linux].
+
+*Creating a Red Hat Enterprise Linux Atomic Host Instance from a QCOW2 image*
+
+The following procedure assumes you are familiar with Red Hat Enterprise Linux OpenStack Platform. For more information about Red Hat Enterprise Linux OpenStack Platform, see the link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux_OpenStack_Platform/5/html/End_User_Guide/index.html[Red Hat Enterprise Linux OpenStack Platform End User Guide].
+
+1. Create a project.
+	a. Log into the Red Hat Enterprise Linux OpenStack Platform Dashboard
+	b. Create a project by going to the *Admin Tab* and then clicking on *Projects* under _Identity Panel_.
+	c. Click *Create Project* and provide a Project Name that is meets your site requirements. Additional configuration is not required, but should be done to meet your site requirements.
+
+2.  Setup networking for your project. This will vary by site configuration. In general the following steps are required:
+	a. Create a network and a subnet for the internal networking for the project.
+	b. Create a router and assign a gateway and create an interface to configure it to connect the internal network to the external network.
+
+3. Create or upload a key pair to use with instances. The key pair settings can be found in the *Project Tab* under *Manage Compute* in *Access & Security* on the *Keypair Tab*.
+
+4. Load the `QCOW2` image into Red Hat Enterprise Linux OpenStack Platform.
+	a. Click *Images & Snapshots* located on the *Project Tab* under _Manage Compute_.
+	b. Click *Create Image* and provide the following information:
+  	* _Name_: A meaningful image name
+    * _Image Source_: Choose Image File to allow a file to be uploaded from your local workstation.
+    * _Format_: Choose QCOW2
+    * _Minimum Disk (GB)_: The minimum amount of disk space this image should be allowed to have. For more information, see link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7-Beta/html/Installation_Guide/sect-installation-planning-disk-space-memory-x86.html[Disk Space and Memory Requirements].
+    * _Minimum Ram (MB)_: The minimum amount of memory this image should be allowed to have. For more information, see link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7-Beta/html/Installation_Guide/sect-installation-planning-disk-space-memory-x86.html[Disk Space and Memory Requirements].
+	c. Finally, click *Choose File* and select the *QCOW2* image to upload and then click *Create Image* to start the upload.
+
+5. Set up the instance to be launched, including basic first boot configuration using cloud-init.
+	a. Access the _Launch Instance_ dialog box by clicking on the *Launch Instance* button found on the *Projects Tab* under _Manage Compute_ on the *Instances Screen*.
+	b. Provide the following information in the _Launch Instance_ dialog box on the *Details Tab*.
+		* _Instance Name_: A meaningful instance name
+    * _Flavor_: A properly sized instance for your application requirements that meets the minimum requirements for Red Hat Enterprise Linux Atomic Host.
+    * _Instance Boot Source_: Choose the image you loaded in the previous step. For more information, see link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7-Beta/html/Installation_Guide/sect-installation-planning-disk-space-memory-x86.html[Disk Space and Memory Requirements].
+	c. Provide the following information in the _Launch Instance_ dialog box on the *Access & Security Tab*.
+		* _Keypair_: Select the key pair you wish to use with this instance.
+  d. Provide the following information in the _Launch Instance_ dialog box on the *Networking Tab*.
+		* _Selected Network_: Select the network you wish to use with this instance.
+	e. Provide the following information in the _Launch Instance_ dialog box on the *Post-Creation Tab*.
+		* _Customization Script_: In this field, paste the equivalent of a `user-data` file for cloud-init. A `user-data` is a plain text file which provides information about users and configuration of the system. This information will be used to enable access to the Red Hat Enterprise Linux Atomic Host instance. By default, the `root` user is password protected; therefore, if you do not create the `user-data` file, you will not be able to log in.
++
+		 An example of a `user-data` file is below:
++
+....
+#cloud-config
+password: atomic
+chpasswd: {expire: False}
+ssh_pwauth: True
+ssh_authorized_keys:
+- ssh-rsa AAA...SDvz user1@yourdomain.com
+- ssh-rsa AAB...QTuo user2@yourdomain.com
+....
++
+[NOTE]
+The first line of the example (`#cloud-config`) is not a comment or a command example - it is a mandatory line in the configuration file.
++
+This example enables the `cloud-user` user to log in either with a password or an SSH key. The use of both methods is possible, but not required. An initial password is set on the `password` line; when the user logs in for the first time on this instance, they will be prompted to change their password as defined on the `chpasswd` line. Forcing the user to change their password after the first login is recommended because initially the password is stored in plain text.
++
+The final four lines in the example configure remote login using SSH. The `ssh_pwauth: True` line enables SSH using a password, and the `ssh_authorized_keys` starts a block of one or more authorized public keys. Keys described in this file will be added to the `~/.ssh/authorized_keys` file. Each authorized key must be on a separate line and start with two spaces followed by a hyphen (`-`) and another space.
++
+For additional information about this file, see the // xref to cloud-init
+	f. Click the *Launch* button to start your instance.
+
+=== VMWare Installation
+
+VMware vSphere provides a means of deploying and managing virtual machine resources. This section explains how to run Red Hat Enterprise Linux Atomic Host using the VMware vSphere Client. For the examples in this article, the ISO image was created on a Red Hat Enterprise Linux 7 system and Red Hat Enterprise Linux Atomic Host was run on VMware vSphere that was set up as a single ESXi 5.5 hypervisor and vCenter host running on a Microsoft Windows system.
+
+*Getting a Red Hat Enterprise Linux Atomic Host Image*
+
+To create a Red Hat Enterprise Linux Atomic Host virtual machine image that you can run on VMware vSphere, first download the Red Hat Enterprise Linux Atomic Host OVA file for VMware from the link:https://access.redhat.com/downloads/content/271/ver=/rhel---7/7.2.6-1/x86_64/product-software[Download Red Hat Enterprise Linux] page.
+
+The vSphere OVA plug-in has a configurable network controller and a configurable SCSI controller.
+
+The configurable parameters are:
+
+....
+vsphere_scsi_controller_type - Valid settings are:
+                                 "lsilogic" and "VirtualSCSI"
+
+vsphere_network_controller_type - Valid settings are:
+                                    "E1000" and "VmxNet3"
+....
+
+When these parameters are not explicitly set, they default to the non-paravirtualization settings. The SCSI controller non-paravirtualization setting is "lsilogic". The network controller non-paravirtualization setting is "E1000".
+
+*Creating a cloud-init ISO File*
+
+You need to create a cloud-init ISO image that includes information that is used to configure the Red Hat Enterprise Linux Atomic Host system. This information can include a host name, a user name and password, and other configuration settings. Create the configuration information needed and produce the ISO image as described in the following steps:
+
+1. Create cloud-init `meta-data` file.
++
+The final installation configuration options are set with a pair of cloud-init configuration files. The first installation configuration file contains the metadata. Create this file with a text editor and call it `meta-data`. This file provides information that identifies the instance of Red Hat Enterprise Linux Atomic Host being installed. The `instance-id` can be any identifying name and the `local-hostname` should be a host name that follows your site standards, for example:
++
+....
+instance-id: Atomic0
+local-hostname: atomic-00
+....
+
+2. Create cloud-init `user-data` file.
++
+The second installation configuration option file is the user data file. This file provides information about users on the system. Create it with a text editor and call it `user-data`. This file will be used to enable access to the installation of Red Hat Enterprise Linux Atomic Host. By default, the root user is password locked and it is not possible to log in if this step is skipped. The following is an example of what the `user-data` file will look like:
++
+....
+#cloud-config
+password: atomic
+chpasswd: {expire: False}
+ssh_pwauth: True
+ssh_authorized_keys:
+  - ssh-rsa AAA...SDvz user1@yourdomain.com
+  - ssh-rsa AAB...QTuo user2@yourdomain.com
+....
++
+This `user-data` file enables the default user, `cloud-user`, to log in either with a password or with an SSH key. The use of both methods is possible but not required. Password login is enabled by the `password` and `chpasswd` lines. The password contains the plain-text password for the `cloud-user` user. The `chpasswd` line turns off password expiration to prevent the first login from immediately prompting for a change of password. This is optional. If you set a password, it is recommended that you change it when you first log in because the password has been stored in a plain text file.
++
+SSH login is enabled by the last three lines of the file. The `ssh_pwauth` line enables SSH login. The `ssh_authorized_keys` line begins a block of one or more authorized keys. Each public SSH key listed on the `ssh-rsa` lines will be added to the cloud-user `~/.ssh/authorized_keys` file. In this example, two keys are listed. For this example, the key has been truncated, in a real file the entire public key must be listed. Note that the `ssh-rsa` lines must be preceded by two spaces, followed by a hyphen, followed by another space.
+
+3. Create ISO file.
++
+Once you have completed your files, they need to be packaged into an ISO image. This ISO image is used as a virtual configuration CD with the virtual machine. This ISO image, called `atomic0-cidata.iso`, is created with the following command on Red Hat Enterprise Linux:
++
+....
+# genisoimage -output atomic0-cidata.iso -volid cidata -joliet -rock user-data meta-data
+....
+
+4. Transfer the newly created ISP image to the host running VMware.
+
+==== Setting up a Red Hat Enterprise Linux Atomic Host Virtual Machine in VMware*
+
+The steps for running a Red Hat Enterprise Linux Atomic Host on a VMware vSphere client include the following:
+
+1. Adding the ISO image you created earlier into your VMware vSphere data store.
+2. Deploying your OVA file as an OVF template in vSphere.
+3. Attaching the ISO image as a CD/DVD drive to the vSphere template.
+4. Run the Red Hat Enterprise Linux Atomic Host virtual machine.
+
+[NOTE]
+This procedure assumes you are familiar with VMware vSphere and is not written with reference to any specific version of VMware vSphere.
+
+*Add image to the Datastore*
+
+1. Open the VMware vSphere client.
+2. In the left pane, access *Datastores*.
+3. Select the target datastore.
+4. Select *Browse this datastore*.
+5. Select the folder icon and create a new folder. In this example, it is called `atomic01/`.
+6. With the new folder `atomic01/` highlighted, select the GUI option to upload data to the datastore (and to the folder).
+7. Browse to the cloud-init ISO file you created earlier (for example, `atomic01-cid.iso`), select it, and upload it to the datastore. If an identically named file already exists in the datastore, you will be asked if you want to overwrite it.
+8. Close the Datastore Browser.
+
+*Deploy OVF template*
+
+1. Select *Home*, then *Inventory*, then the *Hosts and Clusters* option.
+2. Select *File and Deploy OVF Template*.
+3. Browse to the location where you have the OVA file, for example, `rhel-atomic-cloud-7.1-6.x86_64.vsphere.ova`, select it, and click *Open*.
+4. Select the *Next* button. You see the OVF template details screen.
+5. From the *OVF template details screen*, select *Next* again.
+6. Type in the name for your Red Hat Enterprise Linux Atomic Host virtual machine.
+7. Select a host or cluster for the virtual machine to run in and click *Next*.
+8. Select the *Disk Format* option. You may leave the defaults. Then click *Next*.
+
+9.
+[NOTE]
+Be sure not to select the *Power on after deployment* check box. Selecting it will start the virtual machine and it should be started later after the cloud-init ISO has been attached.
++
+Click *Finish* to begin deploying the template. This should take no more than two minutes.
+
+*Attach ISO image as a CD/DVD to Virtual Machine*
+
+1. Right-click on the newly added Red Hat Enterprise Linux Atomic Host template and select *Edit Settings*. (Select the *Virtual Machines* tab or expand the server in the Tree View in order to see the virtual machine.)
+2. From the *Virtual Machine Properties* window, select *Add* and then *CD/DVD Drive* and click *Next*.
+3. Select the *Use an ISO image* option and click *Next*.
+4. Browse to find the ISO image you created earlier (we called ours `atomic0-cidata.iso`), select it, and click *Next*. The ISO can be found in the datastore that you uploaded it to, in the folder that you created.
+5. After the *Advanced* options are displayed, click *Next* to continue.
+6. When the *Ready to Complete* screen appears, click *Finish* to complete the settings. Now you are ready to run the Red Hat Enterprise Linux Atomic Host virtual machine.
+7. Click *OK* to exit the *Properties* screen.
+
+*Run the Red Hat Enterprise Linux Atomic Host virtual machine*
+
+1. To start up the Red Hat Enterprise Linux Atomic Host virtual machine, click to highlight it, then select the *Power On* button.
+2. Select the *Console* tab to watch as the virtual machine boots up.
+
+If you configured Red Hat Enterprise Linux Atomic Host as described here, you should be able to log into the virtual machine with the user name `cloud-user` and password `atomic` that you defined when you created the cloud-init ISO.
+
+=== Microsoft Hyper-V Installation
+
+This section explains how to use Microsoft Hyper-V to create virtual machines that run Red Hat Enterprise Linux Atomic Host. Before you begin the installation process, make sure to download the installation media from the link:https://access.redhat.com/downloads/content/271/ver=/rhel---7/7.2.6-1/x86_64/product-software[Download Red Hat Enterprise Linux] page. The VHD image provided by Red Hat is a pre-deployed disk image which can be used to rapidly deploy Generation 1 Hyper-V virtual machines; alternatively you can use the Red Hat Enterprise Linux Atomic Host ISO installer, which allows for customized installations.
+
+For full documentation of Microsoft Hyper-V, see the link:https://technet.microsoft.com/en-us/library/ee344828%28v=ws.10%29.aspx[Hyper-V Getting Started] section of the Microsoft TechNet Library.
+
+*Creating a Virtual Machine in Hyper-V*
+
+1. In the *Actions* menu, select *New*. Then, select *Virtual Machine* from the drop-down menu, and click *Next*. A new dialog window titled *New Virtual Machine Wizard* will open.
+2. _Before You Begin_. Click *Next*.
+3. _Specify Name and Location_. Name the new virtual machine, and click *Next*.
+4. _Specify Generation_. Specify Generation 1 if you want to use the VHD disk image provided by Red Hat, or Generation 2 if you need to. (See Section 25.5.3, “Differences Between Generation 1 and Generation 2” for information about Generation 1 and Generation 2 virtual machines.)
+5. Click *Next* to continue.
+6. _Assign Memory_. Select how much memory should be assigned to the virtual machine, and click *Next*.
+7. _Configure Networking_. In the *Connections* drop-down menu, select *external*. Then, click *Next*.
+8. _Connect Virtual Hard Disk_. If you are using the VHD disk image provided by Red Hat, choose *Use an existing virtual hard disk* and then specify the location of the VHD file you have downloaded from Red Hat Customer Portal. Click *Next*.
+9. *Summary*. Review your selections and click *Finish* to create the virtual machine.
+
+*Preparing for Installation*
+
+Once you run the Hyper-V image, you will be asked for login credentials. These can be preset using a pair of cloud-init files and you can also use the files to set other installation configuration options. The following is an example procedure:
+
+* `meta-data`
++
+A plain text file which provides information that identifies the instance of Red Hat Enterprise Linux Atomic Host being installed. Its contents should be similar to the following example:
++
+....
+instance-id: Atomic0
+local-hostname: atomic-00
+....
++
+The `instance-id` can be any identifying name and the `local-hostname` should be a host name that follows your site standards.
+
+* `user-data`
++
+A plain text file which provides information about users on the system. This information will be used to enable access to the Red Hat Enterprise Linux Atomic Host instance. By default, the `root` user is password protected; therefore, if you do not create the `user-data` file, you will not be able to log in.
++
+An example of a `user-data` file is below:
++
+....
+#cloud-config
+password: atomic
+chpasswd: {expire: False}
+ssh_pwauth: True
+ssh_authorized_keys:
+- ssh-rsa AAA...SDvz user1@yourdomain.com
+- ssh-rsa AAB...QTuo user2@yourdomain.com
+....
++
+[NOTE]
+The first line of the example (`#cloud-config`) is not a comment or a command example - it is a mandatory line in the configuration file.
++
+This example enables the `cloud-user` user to log in either with a password or an `SSH` key. The use of both methods is possible, but not required. An initial password is set on the `password` line; when the user logs in for the first time on this instance, they will be prompted to change their password as defined on the `chpasswd` line. Forcing the user to change their password after the first login is recommended because initially the password is stored in plain text.
++
+The final four lines in the example configure remote login using `SSH`. The `ssh_pwauth: True` line enables `SSH` using a password, and the `ssh_authorized_keys` starts a block of one or more authorized public keys. Keys described in this file will be added to the `~/.ssh/authorized_keys` file. Each authorized key must be on a separate line and start with two spaces followed by a hyphen (`-`) and another space.
+
+Once you have created both of the files described above, you must package them into the ISO image. This image will then be used as a virtual configuration CD on the virtual machine. To package the files into an image, use the following command:
+
+....
+# genisoimage -output atomic0-cidata.iso -volid cidata -joliet -rock user-data meta-data
+....
+
+This will create a new ISO image file named `atomic0-cidata.iso`.
+
+*Differences Between Generation 1 and Generation 2*
+
+Microsoft Hyper-V has two different _generations_ (also known as _modes_): Generation 1 and Generation 2. The differences between these generations have impact on the installation process of Red Hat Enterprise Linux Atomic Host.
+
+Generation 1 disk images are supported on all Microsoft Hyper-V hosts. Generation 2 disk images are supported only on Microsoft Windows 2012 and Microsoft Windows 8.1.
+
+Images provided by Red Hat fall into the Generation 1 category. These disk images allow for immediate deployment of preconfigured instances of Red Hat Enterprise Linux Atomic Host as described in Section 25.5.1, “Creating a Virtual Machine in Hyper-V”.
+
+Preconfigured Generation 2 disk images are not provided by Red Hat. If you want to deploy Red Hat Enterprise Linux Atomic Host as a Generation 2 virtual machine, you can use the interactive installer ISO image and perform an installation using Anaconda (either manually or automatically using a Kickstart file). This process is described in earlier sections of this guide, starting with Chapter 6, Installing Using Anaconda; Kickstart installations are discussed in Chapter 23, Kickstart Installations.
+
+=== Google Compute Engine Installation
+
+Google Compute Engine (GCE) is a service that provides virtual machines that run on Google infrastructure. This document shows how to run Red Hat Enterprise Linux Atomic Host on GCE.
+
+Red Hat Enterprise Linux Atomic Host has been designed to take advantage of the heritage of powerful technology available in Red Hat Enterprise Linux 7, in a variation of Red Hat Enterprise Linux 7 optimized for Linux containers that run using the Docker engine. Google Compute Engine (GCE) is a service that provides virtual machines (VMs) that run on Google infrastructure. These VMs can be used for running Red Hat Enterprise Linux Atomic Host.	This sections explains how to start a virtual machine instance of Red Hat Enterprise Linux Atomic Host on GCE.
+
+If you an interested in more details, refer to link:https://cloud.google.com/compute/docs/[The official documentation for Google Compute Engine].
+
+==== Enabling Google Compute Engine
+
+*Creating a Project and Setting Up Billing*
+
+Perform the following steps to create a project and set up billing for Google Compute Engine:
+
+1. Log into your Google account, go to the Google Developers Console at https://console.developers.google.com/project. The Developers Console provides a list of projects that are available to you.
+
+2. Select the project you wish to enable. If you want to create a new project, click on the red *Create Project* button. You are prompted to select the project name and ID. If your project belongs to a specific domain, your project ID would be in the form `\<domain\>:\<your-chosen-project-id\>`. Then, you are directed to the project dashboard.
+
+3. To activate Google Compute Engine, set up billing by clicking on the *Billing & Settings* menu item on the right bar. Then click on *Enable Billing*. Fill in the form that appears afterwards. Google Compute Engine will prompt you to set up billing before you can use the service. It is not possible to use Google Compute Engine without activating billing. Note that after activating, your account may take about five minutes to be ready.
+
+*Downloading and Setting Up GCE tools*
+
+To manage your Google Compute Engine resources, first download and install the gcloud command-line tool:
+
+1.  Execute the following command to install the Google Cloud SDK:
++
+....
+$ curl https://sdk.cloud.google.com | bash
+....
+
+2. During the installation, you will be prompted several times to provide necessary information. First, you are asked to specify a destination directory for Google Cloud SDK:
++
+....
+Directory to extract under (this will create a directory google-cloud-sdk) (/home/user):
+....
+
+3. Then you are asked whether you wish to allow usage reporting to Google so that they can use this data to improve the tool.
+
+4. The Google Cloud SDK is then installed. Afterwards, several prompts for configuring your profile follow. You can specify an `rc` file, change the `$PATH` variable, and enable bash completion. Adding these programs to your `$PATH` variable is good because it allows you to run them without having to provide their full path. Enabling bash completion is also helpful because the command consists of multiple arguments that are easier to type with completion.
+
+5. Restart your terminal to allow changes to your PATH to take affect. For example, you can use:
++
+....
+$ source ~/.bash-profile-file
+....
+
+6. Replace `bash-profile-file` with a path to your bash profile file. This is typically the `~/.bashrc file`.
+
+*Authenticating to GCE*
+
+Authenticate to the Google Cloud platform by running:
+
+....
+$ gcloud auth login
+....
+
+The above command launches a web browser with a sign-up dialog for your Google account. Sign in to proceed. During the sign-in process you will need to allow Google Compute Engine to access some information about your Google Account. It is possible to authenticate without launching the browser by using the `--no-launch-browser` option, see https://cloud.google.com/compute/docs/gcloud-compute/#auth for details.
+
+*Setting Up Project Defaults*
+
+Using the command template, `gcloud config set default default_value` it is possible to set project defaults so that command options for commonly used flags do not have to be passed to every command. To list the current defaults execute the `gcloud config list` command. The template, `gcloud config unset default` will remove a project default. Execute the following command to set the default project:
+
+....
+$ gcloud config set project project_id
+....
+
+Where _project_id_ stands for the id of the project you created in _Creating a Project and Setting Up Billing_.
+
+Execute the following command to set the default zone:
+
+....
+$ gcloud config set compute/zone zone
+....
+
+Where `zone` determines a geographical location where your instance should live. See https://developers.google.com/compute/docs/zones#available for a list of available zones.
+
+==== Starting a Red Hat Enterprise Linux Atomic Host Instance
+
+Before the Red Hat Enterprise Linux Atomic Host image can be used in GCE, it needs to be transformed from a qcow2 file into a RAW image. This is done by downloading the qcow2 file and then transforming it into a tar file. This file is uploaded to GCE and then an instance is created.
+
+*Creating a Red Hat Enterprise Linux Atomic Host RAW File*
+
+Perform the following steps to create a RAW file that can be uploaded to GCE.
+
+1. Download the Red Hat Enterprise Linux Atomic Host qcow2 file from link:https://access.redhat.com/downloads/content/271/ver=/rhel---7/7.2.6-1/x86_64/product-software[Download Red Hat Enterprise Linux].
+
+2. The qcow2 image has been compressed with `xz`. To decompress the image, enter the following command:
+
+....
+$ xz -d rhel-atomic-cloud-7.1-0.x86_64.qcow2.xz
+....
+
+3. The qcow2 image must be converted into a RAW disk file in order to used in GCE. This is done with qemu.
+
+....
+$ qemu-img convert -S 4096 -f qcow2 -O raw rhel-atomic-cloud-7.1-0.x86_64.qcow2 disk.raw
+....
+
+4. The raw disk file needs to be packaged with tar prior to being uploaded to GCE. The raw file has to be named disk.raw.
+
+....
+$ tar -Szcf rhel-atomic-cloud-7.1-0.x86_64.tar.gz disk.raw
+....
+
+5. The uploaded raw disk file will be stored in a Google Cloud Storage bucket. If you do not already have a bucket created, you can create one using `gsutil`.
+
+....
+$ gsutil mb gs://bucketname
+....
+
+6. Upload the raw disk file using *gsutil*.
+
+....
+$ gsutil cp rhel-atomic-cloud-7.1-0.x86_64.tar.gz gs://bucketname
+....
+
+7. Before you can use the raw disk file, it has to be created as a GCE image.
+
+....
+$ gcloud compute images create GCE_IMAGE_NAME --source-uri gs://bucketname/rhel-atomic-cloud-7.1-0.x86_64.tar.gz
+....
+
+8. You can verify the image is uploaded and available by looking for it in the output of *gcloud compute images list*.
+
+*Creating a Red Hat Enterprise Linux Atomic Host Instance*
+
+Execute the following command to create an Atomic Host Instance:
+
+....
+$ gcloud compute instances create my-atomic-instance --machine-type n1-standard-1 --image GCE_IMAGE_NAME --metadata-from-file startup-script=<your-statup-script>
+....
+
+where:
+
+`my-atomic-instance` is a name of an instance for this example. Instance names can contain only lowercase letters, digits, and dashes (except the last character, which cannot be a dash).
+
+`--machine-type` sets your desired machine types. A machine type determines the memory, number of virtual cores, and persistent disk limits that your instance will have. Refer to https://developers.google.com/compute/docs/machine-types for details.
+
+`--image` sets the image to be used. An image contains the operating system and root file system that is necessary for starting an instance. GCE automatically creates a root persistent disk to store the root file system. The GCE_IMAGE_NAME is the image you created in the previous step.
+
+`--metadata-from-file` specifies the metadata to be made available in the instance environment through the local metadata server. Use this flag to specify a script to be executed automatically when the Red Hat Enterprise Linux Atomic Host instance launches for the first time. See Section xref “Executing a Custom Script on Instance Creation” for more information. Note that the `user-data` key is required and cannot be replaced with a custom key, since the startup scripts for Red Hat Enterprise Linux Atomic Host instance are processed by the *cloud-init* utility and not by the GCE agent.
+
+[NOTE]
+This command blocks until the instance is running. When the instances is first created, it must boot and then self-configure. This takes a few moments and may delay your ability to log in to the instance.
+
+*Executing a Custom Script on Instance Creation*
+
+As mentioned above, you can use the `--metadata-from-file` option when creating the instance to a specify custom script to be executed in that instance on its first start. You can run any system commands necessary from this script, as these commands are executed with root permissions. For example:
+
+....
+--metadata-from-file startup-script=<your-startup-script>
+....
+
+Invokes the startup.sh script with the following content:
+
+....
+#! /bin/sh
+touch newfile
+....
+
+This line creates a new file called `newfile`.
+
+[NOTE]
+The startup script for Red Hat Enterprise Linux Atomic Host instance is not processed by the GCE agent, but by the *cloud-init* utility. Therefore, you cannot use custom keys with `--metadata-from-file`. Always use the `user-data` key when configuring custom script for Red Hat Enterprise Linux Atomic Host instance.
+
+As an alternative to locally-stored startup script, you can upload your script to Google Cloud Storage and then access it with the `--metadata` option. This is required if your script exceeds the metadata value length limit of 32,768 bytes. See http://developers.google.com/compute/docs/howtos/startupscript#googlecloudstorage for more details.
+
+==== Logging into a Red Hat Enterprise Linux Atomic Host Instance
+
+The *gcloud* tool has a built-in ssh command that enables you to log into an instance using the instance name.
+
+To log into your instance, execute the following command:
+
+....
+$ gcloud compute ssh cloud-user@my-atomic-instance
+....
+
+Here, `cloud-user` is the default user name. If you have not yet created an SSH key, you will be prompted to create one. Further information is available in link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7-Beta/html/Installation_Guide/sect-atomic-virtualization-google.html#sect-atomic-gce-ssh-password[Password Protecting Your SSH Keys].
+
+[NOTE]
+For security reasons, the standard Google images do not provide the ability to connect using SSH directly as root. The instance creator and any users that were added using the `--authorized_ssh_keys` flag or the metadata `sshKeys` value are automatically administrators to the account, with the ability to run *sudo* without requiring a password. Although it is not recommended, advanced users can modify `/etc/ssh/sshd_config` and restart *sshd* to change this policy.
+
+[WARNING]
+GNOME users can occasionally see the message
++
+....
+Agent admitted failure to sign using the key
+....
++
+when trying to connect to the GCE instance trough SSH. This is caused by the GNOME keyring management that tries to use a wrong SSH key. It is specific to the rhel-atomic-host-20141111 image for the GCE environment.
++
+To work around this problem, enter the following command before executing `gcutil`:
++
+....
+$ ssh-add ~/.ssh/google_compute_engine
+....
+
+Once you have logged in, you can work as you would on other Red Hat Enterprise Linux machines. You have root permissions on your instance and full control over everything. To become root, execute:
+
+....
+cloud-user@my-atomic-instance$ sudo -i
+....
+
+If you need to log out of your instance, you can execute the following command:
+
+....
+cloud-user@my-atomic-instance$ exit
+....
+
+Once you have installed Red Hat Enterprise Linux Atomic Host, it is ready to run Linux containers.
+
+*Password Protecting Your SSH Keys*
+
+The first time you log into an instance with SSH, gcloud creates an ssh public/private key pair on your local machine, and copies the public key to your project. These keys are needed to log into your instance using ssh. When creating these keys for the first time, gcutil will ask you to enter and confirm a passphrase:
+
+....
+WARNING: You don't have an ssh key for Google Compute Engine. Creating one now...
+Enter passphrase (empty for no passphrase):
+....
+
+Although you can leave the passphrase empty, we highly recommend entering a passphrase to protect your SSH keys. You will rarely be asked to enter your passphrase, and if you do not password protect these keys, a malicious user could use them to access your instances as you.
+
+==== Monitoring a Red Hat Enterprise Linux Atomic Host Instance
+
+The Google Cloud SDK provides several ways to monitor parameters of your instances. To view general information about the current gcloud environment, run:
+
+....
+$ gcloud info
+....
+
+Execute the `describe` command to find detailed information about a specific instance:
+
+....
+$ gcloud compute instances describe my-atomic-instance
+canIpForward: false
+creationTimestamp: '2014-11-11T02:15:58.372-08:00'
+disks:
+- autoDelete: true
+  boot: true
+  deviceName: persistent-disk-0
+  index: 0
+  interface: SCSI
+  kind: compute#attachedDisk
+  mode: READ_WRITE
+  source: https://www.googleapis.com/compute/v1/projects/eighth-saga-761/zones/europe-west1-b/disks/my-atomic-instance2
+  type: PERSISTENT
+id: '6632858316955862880'
+kind: compute#instance
+machineType: https://www.googleapis.com/compute/v1/projects/eighth-saga-761/zones/europe-west1-b/machineTypes/n1-standard-1
+metadata:
+  fingerprint: owFsCDPRlkY=
+  kind: compute#metadata
+name: my-atomic-instance2
+networkInterfaces:
+- accessConfigs:
+  - kind: compute#accessConfig
+	name: external-nat
+	natIP: 23.251.142.75
+	type: ONE_TO_ONE_NAT
+  name: nic0
+  network: https://www.googleapis.com/compute/v1/projects/eighth-saga-761/global/networks/default
+  networkIP: 10.240.184.150
+scheduling:
+  automaticRestart: true
+  onHostMaintenance: MIGRATE
+selfLink: https://www.googleapis.com/compute/v1/projects/eighth-saga-761/zones/europe-west1-b/instances/my-atomic-instance2
+serviceAccounts:
+- email: 464767924601-compute@developer.gserviceaccount.com
+  scopes:
+  - https://www.googleapis.com/auth/devstorage.read_only
+status: RUNNING
+tags:
+  fingerprint: 42WmSpB8rSM=
+zone: https://www.googleapis.com/compute/v1/projects/eighth-saga-761/zones/europe-west1-b
+....
+
+To get data from the serial port of your Red Hat Enterprise Linux Atomic Host instance, run:
+
+....
+$ gcloud compute instances get-serial-port-output my-atomic-instance
+....
+
+This command returns the output of the GCE instance's serial port. With this command, you get information about the instance without logging into it, which is useful for diagnostic purposes.
+
+*Finding the External IP Address of an Instance*
+
+By default, your instance is assigned a new ephemeral external IP address. You can to find this address along with other information in the output of `gcutil getinstance` shown above. Alternatively, you can enter the following command to get addresses of all your instances:
+
+....
+$ gcloud compute instances list
+NAME                ZONE           MACHINE_TYPE  INTERNAL_IP    EXTERNAL_IP   STATUS
+my-atomic-instance  us-central1-a  n1-standard-1 10.240.184.150 23.251.142.75 RUNNING
+....
+
+==== Creating a Firewall Rule
+
+By default, Google Compute Engine blocks all connections to and from an instance to the Internet. To open ports for services like *httpd*, you must manually create a firewall rule. Every project comes with three default firewalls:
+
+1. A firewall that allows SSH access to any instance.
+2. A firewall that allows all communication between instances in the same network.
+3. A firewall that allows ICMP traffic from any source to any instance on the network.
+
+For example, to permit HTTP requests to your instance, create a new firewall using the following `gcutil` command:
+
+....
+$ gcloud compute firewall-rules create http-allow --allow tcp:80
+....
+
+By executing the above command, you have:
+
+1. Created a new firewall named `http-allow` that allows port 80 tcp traffic.
+2. Assigned the firewall to the default network in the project.
+3. Allowed all sources inside and outside the network (including over the Internet) to make requests to the server. We did not specify a permitted source for the firewall, so all sources are allowed to make requests to instances assigned to the default network.
+4. Applied this firewall rule to all instances on the network. Because we did not specify a target for your firewall, the firewall applies this rule to all instances in the network.
+
+To review information about your firewall, run:
+
+....
+$ gcloud compute firewall-rules list
+NAME                   NETWORK SRC_RANGES    RULES                        SRC_TAGS TARGET_TAGS
+default-allow-icmp     default 0.0.0.0/0     icmp
+default-allow-internal default 10.240.0.0/16 tcp:1-65535,udp:1-65535,icmp
+default-allow-rdp      default 0.0.0.0/0     tcp:3389
+default-allow-ssh      default 0.0.0.0/0     tcp:22
+http-allow             default 0.0.0.0/0     tcp:80
+....
+
+It is possible to restrict the sources and targets to specific callers and instances using appropriate `addfirewall` flags. To see a complete list of supported flags, run the command `gcutil help addfirewall`, or see https://cloud.google.com/sdk/gcloud/reference/compute/firewall-rules/.
+
+Firewalls only regulate incoming traffic to an instance; they cannot block outgoing packets. Once a connection has been established with an instance, traffic is permitted in both directions over that connection. To prevent an instance from sending outgoing packets, use another technology such as *iptables*.
+
+[NOTE]
+By default, GCE drops TCP connections to instances after 10 minutes of inactivity. To prevent this, configure TCP keep-alives as described in https://developers.google.com/compute/docs/troubleshooting#communicatewithinternet
+
+==== Removing a Red Hat Enterprise Linux Atomic Host Instance
+
+Execute the following command to remove `my-atomic-instance`:
+
+....
+$ gcloud compute instances delete my-atomic-instance
+....
+
+You are prompted to confirm your decision before the instance is deleted. Deleting the instance may take several seconds time. As a part of the deletion confirmation dialog, gcloud informs you that disks will be deleted unless also used by another instance.
+
+=== Amazon Web Services Installation
+
+Amazon Web Services (AWS) is a service that provides virtual machines that run on Amazon infrastructure. This section shows how to run Red Hat Enterprise Linux Atomic Host on AWS.
+
+For more details about AWS, refer to link:https://aws.amazon.com/documentation/ec2/[Amazon Elastic Compute Cloud Documentation].
+
+*Launching a Red Hat Enterprise Linux Atomic Host Instance on Amazon Web Services*
+
+The following procedure will guide you through creating a new instance of Red Hat Enterprise Linux Atomic Host on Amazon Web Services. The procedure assumes that you already have a user account on AWS. This procedure assumes some familiarity with AWS.
+
+[NOTE]
+In order for this procedure to work, you must first have moved your subscriptions to Amazon through the Cloud Access Program. To move your subscriptions to Amazon through the Cloud Access Program complete this form: https://engage.redhat.com/forms/cloud-access-registration. The Cloud Access Program is described in greater detail at http://www.redhat.com/en/technologies/cloud-computing/cloud-access.
+
+1. Log in to and open the link:https://console.aws.amazon.com/ec2/v2/home[Amazon EC2 console].
+2. In the navigation bar at the top of the screen, the current region is displayed. Select the region in which you wish to launch your instance of Red Hat Enterprise Linux Atomic Host. This choice is important because some Amazon EC2 resources can be shared between regions, while others cannot.
+3. From the console dashboard, click *Launch Instance*.
+4. Select *My AMIs* and select the *Shared with Me* check box. It is now possible to search for the AMI.
++
+Choose *Community AMIs* and search for the Red Hat Enterprise Atomic Host AMI instance for your particular region.
+5. Click the *Select* button next to the AMI.
+6. On the *Choose an Instance Type* page, select your Instance Type. The Instance Type should meet the minimum requirements for Red Hat Enterprise Linux Atomic Host. See link:https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7-Beta/html/Installation_Guide/sect-installation-planning-disk-space-memory-x86.html[Disk Space and Memory Requirements] for more information.
+7. Click *Review* and *Launch*.
++
+[NOTE]
+In some Amazon EC2 regions, for example, US East (N. Virginia), Instance Types that use EBS storage require the creation of a VPC before they can be launched. In those cases, *Review and Launch* is not clickable. Click *Next: Configure Instance Details* instead and proceed to the Instance Details screen. Review the defaults and modify them if necessary for your environment, and click *Review and Launch* when ready to proceed.
+8. On the *Review Instance Launch* page, assign a security group by clicking *Edit security groups*. You should select an existing security group or create one that opens the ports you will need for your instance. It is encouraged to leave port 22 open so that SSH will work. AWS accounts can be set up in a manner that restricts the ability of users of that account to create or add security groups. If this occurs, contact the administrator of the AWS account.
+9. When you are satisfied with the settings, click *Review and Launch* to go to the *Review Instance Launch* page. Once you are satisfied with all settings, click *Launch* to start your instance.
+10. In the *Select an existing key pair or create a new key pair* modal dialog, select an existing key pair or create a new one. A key pair is critical as all access to your launched instance is through private SSH key. The key pair is either one that you have already uploaded or one that you will create at this moment. AWS accounts can be set up in a manner that restricts the ability of users of that account to create or add key pairs. If this occurs, contact the administrator of the AWS account.
+11. Click the *View Instances* button to track the progress of your instances launch.
+
+*Logging into a Red Hat Enterprise Linux Atomic Host Instance*
+
+Once your instance is listed as `running`, you may connect to it by following the steps below.
+
+1. From your command prompt, connect to the instance using SSH.
++
+....
+$ ssh cloud-user@instancedns.compute.amazonaws.com
+....
++
+[NOTE]
+You may need to include the `-i /path/key_pair.pem` option to specify the proper private key file.
+
+2. In the *Description* tab at the bottom, locate the *Public DNS* information.
+
+3. On the *Instances* page, select your instance.
+
+4. At this point you are logged into your instance and may continue working with Red Hat Enterprise Linux Atomic Host and run Linux containers.
+
+
+
+
+
+

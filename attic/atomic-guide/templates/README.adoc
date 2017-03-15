@@ -1,0 +1,3 @@
+= templates/
+
+This folder contains the various templates we use to create our docs.

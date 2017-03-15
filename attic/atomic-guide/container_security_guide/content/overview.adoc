@@ -1,0 +1,26 @@
+This guide explains how to make your Docker workflow more secure. There
+is no one-size-fits-all solution to the problem of
+securing a workflow. 
+
+Because there is no single solution for
+securing your Docker workflow, you need to understand the tools and
+strategies that you can use to improve your Docker workflow's security.
+The general strategy for doing this is to reduce the number of potential
+attack vectors in your Docker infrastructure available to
+malicious agents.
+
+This guide will provide you with the fundamentals you need to understand
+the interaction between security practices and the Docker ecosystem.
+This guide will furnish you with the tools and
+strategies you need to find the security solution that works best with
+your Docker workflow.
+
+This is the general strategy for securing containers:
+avoid untrusted content, keep containers up-to-date, leverage SELinux,
+minimize attack surface, and use virtualization.
+
+The containerization ecosystem is developing, and it changes fast. This
+guide is intended to make the containerization ecosystem legible to you
+in order to help you make the best choices for your own implementation of
+containerization.
+

@@ -1,0 +1,112 @@
+The Red Hat Enterprise Linux Atomic Tools Container (RHEL Tools Container) is a docker-formatted image that includes hundreds of software tools for troubleshooting and investigating a Red Hat Enterprise Linux Atomic (RHEL Atomic) Host. Designed to run as a privileged container, the RHEL Tools Container allows you to interact directly with the RHEL Atomic Host system to uncover and solve problems. Inside the RHEL Tools Container are popular tools such as sosreport, kdump, and many others (most of which are not included with RHEL Atomic).
+
+Using this topic, you will learn:
+
+* How to get and run the RHEL Atomic Tools Container
+* How the RHEL Atomic Tools Container works
+* What commands are in the RHEL Atomic Tools Container and how to use them
+
+==== Overview
+
+RHEL Atomic is designed to be a light-weight, streamlined version of Red Hat Enterprise Linux that is configured and tuned specifically for running Linux containers. It is kept light so it can consume minimal amounts of resources while it is being deployed and run efficiently once it is deployed. This makes RHEL Atomic particularly suited for hosting containers in cloud environments.
+
+One of the results of keeping down the size of Atomic is that many of the tools that you might expect in a standard RHEL system are not installed in Atomic. Compounding that issue is that fact that Atomic is not made to allow additional software packages to be installed (*yum install favorite_RPM* is not supported).
+
+The solution to this problem is to bring the RHEL Tools Container into a RHEL Atomic system. You can do this either when the Atomic system is initially deployed or when you have a problem and need additional tools to troubleshoot it.
+
+Here are a few facts you should know about the RHEL Tools Container:
+
+* *It's big*: As containers go, it is fairly large (currently about 1GB). This is because we want the container to include as many tools as possible for monitoring and troubleshooting Atomic. If you like, you can just put the container on an Atomic system as it is needed, if the space consumption is a problem during normal operations. (Just keep in mind that pulling in the container could take a bit of time at a point where you may be in a hurry to fix a problem).
+
+* *Contains man pages*: This container offers a way to get RHEL documentation on to the container. Because the man command is not included in RHEL Atomic, the RHEL Tools Container offers a way of viewing man pages. All content in /usr/share/doc is also included for all the installed packages in the container.
+
+* *Opens privileges*: Containers, by default, cannot see most of the Atomic host's file system or namespaces (networking, IPC, process table, and so on). Because the RHEL Tools Container runs as a privileged host and opens access to host namespaces and features, most commands you run from within that container will be able to view and act on the host as though they were run directly on the host.
+
+* *May behave differently*: You can expect, however, that some commands run from within the container, even with privileges open, will behave differently than would the same commands run directly on a RHEL host system. Later, this topic describes some of the most useful tools that come in the RHEL Tools Container and tells how those commands might work differently than you expect when running them in a privileged container.
+
+==== Getting and Running the RHEL Tools Container
+
+The RHEL Tools Container is designed to run on RHEL Atomic hosts. So before you can use it, you need to install a RHEL Atomic system. Then you can get, load, and run the RHEL Tools Container, as described in the following procedure:
+
+* *Install RHEL Atomic Host*: To install and configure a RHEL Atomic host, refer to the appropriate installation guide listed in the documentation.
+
+* *Get RHEL Tools Image*: While logged into the RHEL Atomic host, get the RHEL Tools Container by pulling it with the *docker pull* command, as follows:
++
+....
+# docker pull rhel7/rhel-tools
+....
+
+* *Start the RHEL Tools Container*: To run the RHEL Tools Container, use the atomic command. The following command starts the container using the docker
+command with appropriate options:
++
+....
+# atomic run rhel7/rhel-tools
+[root@localhost /]#
+....
++
+You now have a shell open inside the container, with all the tools in that container ready to run. When you are done, run exit. The next section contains examples of some commands you might want to run from your RHEL Tools container.
+
+==== Running Commands from the RHEL Tools Container
+
+Refer to the following sections to get a feel for commands available within the RHEL Tools Container and understand how commands run inside or outside of the container may behave differently.
+
+* *blktrace*: To use *blktrace* from within a container, you need to first mount the debugfs file system. Here's an example of mounting that file system and running blktrace:
++
+....
+# mount -t debugfs debugfs /sys/kernel/debug/
+# blktrace /dev/vda
+^C
+=== vda ===
+  CPU  0:                38086 events,     1786 KiB data
+  Total:                 38086 events (dropped 0),     1786 KiB data
+....
+
+* *sosreport*: The *sosreport* command includes an atomic plugin that makes it container-aware. So you can simple run *sosreport* and have a report generated that would produce almost the exact same results you would get if you ran it directly on the host. From within the container, you could run:
++
+....
+# sosreport
+Please enter your first initial and last name [localhost.localdomain]: jjones
+Please enter the case id that you are generating this report for: 12345678
+...
+# ls /host/var/tmp
+sosreport-jjones.12345678-20150203102944.tar.xz
+sosreport-jjones.12345678-20150203102944.tar.xz.md5
+....
++
+Keep in mind that the report is copied to the */var/tmp* directory on the host. Because the host's root file system is mounted on */* within the container, the report is available in the */host/var/tmp* directory within the container. So the report will be available after you close the container.
+
+* *useradd*: If you want to add a user to do some non-root activities within the container, you can use the *useradd* command: steps to create the home directory:
++
+....
+# useradd jjones
+# su - jjones
+[jjones@example ~]$
+....
+
+* *strace*: Because you can see the host's process table from within the RHEL Tools Container, many commands that can take a process ID as an argument will work from within the container. Here's an example of the strace command:
++
+....
+# ps -ef | grep ssh
+root        998      1  0 Jan29 ?        00:00:00 /usr/sbin/sshd -D
+# strace -p 998
+Process 998 attached
+select(7, [3 4], NULL, NULL, NULL ...
+....
+
+==== Tips for Running RHEL Tools Container
+
+Here are some tips to help you understand a few other issues related to running the RHEL Tools container:
+
+* Unless you explicitly remove the container (*docker rm rhel-tools*), the container continues to exist on your system.
+
+* Because that container continues to exist, any changes you make (for example, *yum install package*) will persist each time you run the container again. So *atomic run rhel7/rhel-tools* won't pull down any files or do any additional setup on the host the second time you run it.
+
+* Notice that the image is identified by the name *rhel7/rhel-tools*, however, when the image is run, the running instance is referred to as a container named *rhel-tools*. The container is not removed by default, so to see the name of the container, even after it is stopped, type *docker ps -a*.
+
+* Because the *rhel-tools* container is retained, even after it is removed, you cannot upgrade to a new version of the container without explicitly removing the old one. To do that, you should preserve any files from the container you want to keep (copy them somewhere on */host*) then type *docker rm rhel-tools*. After that, proceed to do a new *docker pull rhel7/rhel-tools*.
+
+* Commands that should run directly on the Atomic host include those related to systemd (*systemctl* and *journalctl*), LVM (*lvm*, *lvdisplay*, *vgdisplay* and so on), the *atomic* command, and any commands that modify block devices.
+
+* The *subscription-manager* command is available on both the RHEL Atomic host and within the RHEL Tools Container. In Atomic you must assign a valid Red Hat subscription to the host. In the container, *subscription-manager* package is there to make the related man pages available. But the *subscription-manager* command should not be run from within the container. Once the host is subscribed, however, you can use the *yum* commands within the container to add and manage software packages within the container.
+
+* If you have any issues with the RHEL Tools Container, you can file bugs and RFEs at *bugzilla.redhat.com* under the "Red Hat Enterprise Linux" product and the "rhel-tools-docker" component.

@@ -1,0 +1,93 @@
+The Red Hat Enterprise Linux sadc Atomic Container Image is a Docker-formatted containerized version of the system monitoring and data collection utilities contained in the sysstat package. This container is designed to run on a Red Hat Enterprise Linux Atomic host. With this container installed and running, the following occurs on your Atomic system:
+
+* System activity data are gathered on an on-going basis
+* Commands such as *cifsiostat*, *iostat*, *mpstat*, *nfsiostat*, *pidstat*, *sadf*, and *sar* are available to display that data. You use the *docker exec sadc* command to run the commands.
+
+This topic describes how to get and run the sadc container.
+
+==== Overview
+
+Because sysstat package (which includes sar, iostat, sadc an other tools) is not installed on a Red Hat Enterprise Linux Atomic host, the sadc container offers a way of adding those utilities to an Atomic host. Here are some of the features of the sadc container:
+
+* *Installs from atomic command*: When you use the "atomic install" command to get and run the sadc container, several things happen. The container itself is pulled from the registry, files and directories needed by the sadc service are added to the host, and the container is started with *docker run*.
+
+* *Configure from the host*: Because the files needed by the sadc data collection service are stored on the Atomic host, there is no need to go inside the container itself. All configuration can be done from the host.
+
+* *Super privileged container*: Keep in mind that running the sadc container opens privileges from that container to the host system. The container has root access to RHEL Atomic host and opens access to privileged configuration and log files. For more information on privileged containers, see Running Privileged Docker Containers in RHEL Atomic.
+
+==== Getting and Running the RHEL sadc Container
+
+To use the sadc container on a Red Hat Enterprise Linux Atomic host, you need to install it, load it and run it, as described in the following procedure:
+
+. *Install RHEL Atomic Host*: To install and configure a RHEL Atomic host, refer to the appropriate installation guide listed on the Red Hat Enterprise Linux Atomic Host Documentation page.
+
+. *Install the RHEL sadc Container*: While logged into the RHEL Atomic host, get and start the sadc container by running the following command::
++
+....
+# docker pull rhel7/sadc
+# atomic install rhel7/sadc
+docker run --rm --privileged --name sadc -v /:/host -e HOST=/host -e IMAGE=rhel7/sadc -e NAME=name rhel7/sadc /usr/local/bin/sysstat-install.sh
+Installing file at /host//etc/cron.d/sysstat
+Installing file at /host//etc/sysconfig/sysstat
+Installing file at /host//etc/sysconfig/sysstat.ioconf
+Installing file at /host//usr/local/bin/sysstat.sh
+....
+
+. *Start the sadc container*: To run the RHEL sadc container, use the *atomic* command. The following command starts the container using the docker command with appropriate options:
++
+....
+# atomic run rhel7/sadc
+docker run -d --privileged --name sadc -v /etc/sysconfig/sysstat:/etc/sysconfig/sysstat -v /etc/sysconfig/sysstat.ioconf:/etc/sysconfig/sysstat.ioconf -v /var/log/sa:/var/log/sa -v /:/host -e HOST=/host -e IMAGE=rhel7/sadc -e NAME=sadc --net=host --restart=always rhel7/sadc /usr/local/bin/sysstat.sh
+11c566e20ec995a164f815d9bb76b4b876c555f507c9f56c41f5009c9b1bebf4
+....
++
+After the *atomic* command starts, you can see the exact docker command that is run to start the sadc container. The sadc container runs as a super privileged container. For more information on super privileged containers, refer to Running Super Privileged Docker Containers on a Red Hat Enterprise Linux Atomic Host.
+
+. *Check that the container is running*: Type the following to check that the sadc container is running:
++
+....
+# docker ps
+CONTAINER ID IMAGE                                             COMMAND              CREATED       STATUS       PORTS NAMES
+11c566e20ec9 registry.access.stage.redhat.com/rhel7/sadc:7.1-3 "/usr/local/bin/syss 3 minutes ago Up 2 minutes       sadc
+....
++
+[NOTE]
+While "registry.access.redhat.com/rhel7/sadc:7.1-3" is the full name of the image, including both the name of the registry from which it was downloaded and the version of the image obtained. The actual container that is run locally, however, is simply called "sadc". The difference between the image and container is central to the way docker works.
+
+. *Generate sadc data*: From a shell, type the following generate some system activity data and test that sadc is working properly:
++
+....
+# docker exec sadc /usr/lib64/sa/sa1 1 1
+....
+
+. *Check that sadc worked properly*: If sadc generated some system activity data, you should be able to see it using the sar command as follows:
++
+....
+# docker exec sadc sar
+Linux 3.10.0-229.el7.x86_64 (minion1.example.com) 02/27/15 _x86_64_ (1 CPU)
+
+09:31:25          LINUX RESTART
+09:32:00 CPU %user  %nice %system  %iowait  %steal   %idle
+09:32:18 all 0.86   0.00    0.92      0.00    0.00   98.22
+....
+
+If sadc is working, you should be able to see the data generated by the sadc command you just ran. New data should be generated every 10 minutes. So you can run the *sar* command again to make sure that data is being collected in an on-going basis.
+
+==== Tips for Running the sadc Container
+
+Here are some tips to help you understand a few other issues related to running the sadc container:
+
+* *Running sysstat commands*: You can run any of the commands in the sysstat package to view data gathered by the sadc container. These include *cifsiostat*, *iostat*, *mpstat*, *nfsiostat*, *pidstat*, *sadf*, and *sar*. Because these commands are not on the Atomic host, you must run them using *docker exec*. For example:
++
+....
+# docker exec sadc iostat
+....
+
+* *Image and Container Lifecycle*
++
+If you want to upgrade to a newer version of the Red Hat Enterprise Linux sadc Atomic container image, it is not enough to merely download the new image with *docker pull rhel7/sadc*. You must also explicitly remove the existing sadc container with the following commands, before re-running it, in order to create a fresh container from the new image:
++
+....
+# docker stop sadc
+# docker rm sadc
+....

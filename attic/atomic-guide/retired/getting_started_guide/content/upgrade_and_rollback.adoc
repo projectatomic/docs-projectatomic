@@ -1,0 +1,63 @@
+RHEL Atomic Host uses *rpm-OSTree*, an open source tool, to manage bootable, immutable, versioned file system trees made of RPM content.
+In comparison to other variants of Red Hat Enterprise Linux 7 which use _yum_ and have a
+traditional package management model, RHEL Atomic Host uses OSTree and is upgraded by preparing a new operating system root,
+and making it the default for the next boot.
+
+=== Upgrading to a New Version
+
+To perform an upgrade, execute the following commands:
+
+....
+$ sudo atomic host upgrade
+$ sudo systemctl reboot
+....
+
+If you are using a system that requires an HTTP proxy, the proxy is configured with an environment variable.
+To configure the environment variable, use a command similar to the following one:
+
+....
+$ sudo env http_proxy=http://proxy.example.com:port/ atomic host upgrade
+....
+
+=== Rolling Back to a Previous Version
+
+To revert to a previous installation of Red Hat Enterprise Linux Atomic Host, execute the following commands:
+
+....
+$ sudo atomic host rollback
+$ sudo systemctl reboot
+....
+
+Two versions of Red Hat Enterprise Linux Atomic Host are available on the system after the initial upgrade.
+One is the currently running version. The other is either a new version recently installed from an upgrade or the version that
+was in place prior to the last upgrade.
+
+IMPORTANT: Configuration is preserved across updates, but is only forward-preserved.
+This means that if you make a configuration change and then later roll back to a previous version, the configuration change you made is reverted.
+
+NOTE: Running the atomic host upgrade command will replace the non-running version of Red Hat Enterprise Linux Atomic Host.
+This version will also be configured to be used during the next boot.
+
+To determine which version of the operating system is running, execute the following command.
+
+....
+$ sudo atomic host status
+....
+
+The output that includes the hash name of the directory in the */ostree/deploy/rhel-atomic-host/* directory looks like this:
+
+....
+$ sudo atomic host status
+  TIMESTAMP (UTC)         VERSION   ID             OSNAME               REFSPEC
+* 2015-05-07 19:00:48     7.1.2     203dd666d3     rhel-atomic-host     rhel-atomic-host:rhel-atomic-host/7/x86_64/standard
+  2015-04-02 20:14:06     7.1.1-1   21bd99f9f3     rhel-atomic-host     rhel-atomic-host:rhel-atomic-host/7/x86_64/standard
+....
+
+This fictional sample output shows that version 7.1.1-1 will be booted into on the next restart.
+The version to be booted on the next restart is printed first.
+
+This fictional sample also shows that version 7.1.2 is the currently running version.
+The currently running version is marked with an asterisk (*).
+
+This output was created just after the atomic host upgrade command was executed, and that means that a new version has been staged to be
+ applied at the next restart.

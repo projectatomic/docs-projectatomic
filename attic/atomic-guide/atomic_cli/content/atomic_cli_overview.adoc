@@ -1,0 +1,46 @@
+The *atomic* command-line tool provides a way to interact and manage Atomic Host systems and containers. It provides a high level, coherent entrypoint to the system and makes it easier to interact with special kinds of containers, such as super-privileged containers, and debugging tools.
+
+The *atomic* command uses tools such as *docker*, *ostree* and *skopeo* to manage containers and container host systems. There are also a lot of features built into the atomic command that are _not_ available in the docker command. These features allow you to use special commands for image signing, image verification, the ability to install a container - mounting file systems and opening privileges.
+
+*Understanding LABELs*: Dockerfiles support storing default values for some commands that *atomic* can read and execute. These are called "LABEL" instructions and they make it easy to ship images with their own suggested values, and simplifies running complex docker commands. For example, if a Dockerfile contains the _LABEL RUN_, running *atomic run <image>* executes its contents. The commands in *atomic* that use labels are *install*, *uninstall*, *mount*, *unmount*, *run*, and *stop*.
+
+== Prerequisites
+
+* On *RHEL Atomic Host*, _atomic_ is part of the OSTree and is ready to use.
+
+* On *Red Hat Enterprise Linux*, make sure you have covered the following:
+
+** Subscribe the system to the Extras channel which provides the _atomic_ package.
+
+For Red Hat Subscription Management run this command:
+
+....
+# subscription-manager repos --enable rhel-7-server-extras-rpms
+....
+
+If you are using Satellite, run:
+
+....
+# rhn-channel --add --channel rhel-x86_64-server-extras-7
+....
+
+** Install _atomic_ using Yum:
+
+....
+# yum install atomic
+....
+
+** Make sure the *docker service* is running:
+
+....
+# systemctl status docker
+....
+
+If the output states "inactive", use the following command:
+
+....
+# systemctl start docker
+....
+
+[NOTE]
+On both systems, you need to have root privileges to use *atomic*.

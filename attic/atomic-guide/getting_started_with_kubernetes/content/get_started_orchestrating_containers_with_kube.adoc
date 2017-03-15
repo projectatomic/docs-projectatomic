@@ -1,0 +1,528 @@
+[[get_started_with_kube]]
+
+=== Overview
+
+link:http://github.com/GoogleCloudPlatform/kubernetes[Kubernetes] is a tool for orchestrating and managing Docker containers. Red Hat provides several ways you can use Kubernetes that include:
+
+* *link:https://access.redhat.com/documentation/en/openshift-container-platform/[OpenShift Container Platform]*: Kubernetes is built into OpenShift, allowing you to configure Kubernetes, assign host computers as Kubernetes nodes, deploy containers to those nodes in pods, and manage containers across multiple systems. The OpenShift Container Platform web console provides a browser-based interface to using Kubernetes.
+
+* *link:https://access.redhat.com/documentation/en/red-hat-container-development-kit/[Container Development Kit (CDK)]*: The CDK provides Vagrantfiles to launch the CDK with either OpenShift (which includes Kubernetes) or a bare-bones Kubernetes configuration. This gives you the choice of using the OpenShift tools or Kubernetes commands (such as *kubectl*) to manage Kubernetes.
+
+* *Kubernetes in Red Hat Enterprise Linux*: To try out Kubernetes on a standard Red Hat Enterprise Linux server system, you can install a combination of RPM packages and container images to manually set up your own Kubernetes configuration.
+
+The procedures in this section let describes how to set up Kubernetes using that last option (Kubernetes on Red Hat Enterprise Linux or Red Hat Enterprise Linux Atomic Host). Specifically, in this chapter you set up a single-system Kubernetes sandbox so you can:
+
+* Deploy and run two containers with Kubernetes on a single system.
+* Manage those containers in pods with Kubernetes.
+
+This procedure results in a setup that provides an all-in-one Kubernetes configuration in which you can begin trying out Kubernetes and exploring how it works. In this procedure, services that are typically on a separate Kubernetes master system and two or more Kubernetes node systems are all running on a single system. 
+
+[NOTE]
+The Kubernetes software described in this chapter is packaged and configured differently than the Kubernetes included in OpenShift. We recommend you use the OpenShift version of Kubernetes for permanent setups and production use. The procedure described in this chapter should only be used as a convenient way to try out Kubernetes on an all-in-one RHEL or RHEL Atomic Host system. As of RHEL 7.3, support for the procedure for configuring a Kubernetes cluster (separate master and multiple nodes) directly on RHEL and RHEL Atomic Host has ended. For further details on Red Hat support for Kubernetes, see link:https://access.redhat.com/articles/2726491[How are container orchestration tools supported with Red Hat Enterprise Linux?]
+
+=== Understanding Kubernetes
+
+While the Docker project defines a container format and builds and manages individual containers, an orchestration tool is needed to deploy and manage sets of containers. Kubernetes is a tool designed to orchestrate Docker containers.
+After building the container images you want, you can use a Kubernetes Master to deploy one or more containers in what is referred to as a pod. The Master tells each Kubernetes Node to pull the needed the containers to that Node, where the containers run.
+
+Kubernetes can manage the interconnections between a set of containers by defining Kubernetes Services. As demand for individual container pods increases or decreases, Kubernetes can run or stop container pods as needed using its replication controller feature.
+
+For this example, both the Kubernetes Master and Node are on the same computer, which can be either a RHEL 7 Server or RHEL 7 Atomic Host. Kubernetes relies on a set of service daemons to implement features of the Kubernetes Master and Node. Some of those run as systemd services while others run from containers.
+You need to understand the following about Kubernetes Masters and Node:
+
+* *Master*: A Kubernetes Master is where you direct API calls to services that control the activities of the pods, replications controllers, services, nodes and other components of a Kubernetes cluster. Typically, those calls are made by running *kubectl* commands. From the Master, containers are deployed to run on Nodes.
+* *Node*: A Node is a system providing the run-time environments for the containers. A set of container pods can span multiple nodes.
+
+Pods are defined in configuration files (in YAML or JSON formats).
+Using the following procedure, you will set up a single RHEL 7 or RHEL Atomic system, configure it as a Kubernetes Master and Node, use YAML files to define each container in a pod, and deploy those containers using Kubernetes (*kubectl* command).
+
+[NOTE]
+Three of the Kubernetes services that were defined run as systemd services (`kube-apiserver`, `kube-controller-manager`, and `kube-scheduler`) in previous versions of this procedure have been containerized. As of RHEL 7.3, only containerized versions of those services are available. So this procedure describes how to use those containerized Kubernetes services.
+
+=== Running Containers from Kubernetes Pods
+
+You need a RHEL 7 or RHEL Atomic system to build the Docker containers and orchestrate them with Kubernetes. There are different sets of service daemons needed on Kubernetes Master and Node systems. In this procedure, all service daemons run on the same system.
+
+Once the containers, system and services are in place, you use the *kubectl* command to deploy those containers so they run on the Kubernetes Node (in this case, that will be the local system).
+
+Here's how to do those steps:
+
+==== Setting up to Deploy Docker Containers with Kubernetes
+
+To prepare for Kubernetes, you need to install RHEL 7 or RHEL Atomic Host, disable firewalld, get two containers, and add them to a Docker Registry.
+
+. *Install a RHEL 7 or RHEL Atomic system*: For this Kubernetes sandbox system, install a RHEL 7 or RHEL Atomic system, subscribe the system, then install and start the docker service.
+Refer here for information on setting up a basic RHEL or RHEL Atomic system to use with Kubernetes:
++
+link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-with-containers/#get_started_with_docker_formatted_container_images[Get Started with Docker Formatted Container Images on Red Hat Systems]
+
+. *Install Kubernetes*: If you are on a RHEL 7 system, install the docker, etcd, and some kubernetes packages. These packages are already installed on RHEL Atomic:
++
+....
+# yum install docker kubernetes-client kubernetes-node etcd
+....
+
+. *Disable firewalld*: If you are using a RHEL 7 host, be sure that the firewalld
+service is disabled (the firewalld service is not installed on an Atomic host).
+On RHEL 7, type the following to disable and stop the firewalld service:
++
+....
+# systemctl disable firewalld
+# systemctl stop firewalld
+....
+
+. *Get Docker Containers*: Build the following two containers using the following instructions:
++
+* link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-guide/#install_and_deploy_an_apache_web_server_container[Simple Apache Web Server in a Docker Container]
+* link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-guide/#install_and_deploy_a_mariadb_container[Simple Database Server in a Docker Container]
+
++
+After you build, test and stop the containers (*docker stop mydbforweb* and *docker stop mywebwithdb*), add them to a registry. 
+
+. *Install registry*: To get the Docker Registry service (v2) on your local system, you must install the docker-distribution package. For example:
++
+....
+# yum install docker-distribution
+....
+
+. *Start the local Docker Registry*: To start the local Docker Registry, type the following:
++
+....
+# systemctl start docker-distribution
+# systemctl enable docker-distribution
+# systemctl is-active docker-distribution
+active
+....
+
+. *Tag images*: Using the image ID of each image, tag the two images so they can be pushed to your local Docker Registry. Assuming the registry is running on the local system, tag the two images as follows:
++
+....
+# docker images
+REPOSITORY    TAG         IMAGE ID      CREATED          VIRTUAL SIZE
+dbforweb      latest      c29665465a6c  4 minutes ago    556.2 MB
+webwithdb     latest      80e7af79c507  14 minutes ago   405.6 MB
+# docker tag c29665465a6c localhost:5000/dbforweb
+# docker push localhost:5000/dbforweb
+# docker tag 80e7af79c507 localhost:5000/webwithdb
+# docker push localhost:5000/webwithdb
+....
+
+The two images are now available from your local Docker Registry.
+
+
+==== Starting Kubernetes
+
+Because both Kubernetes Master and Node services are running on the local system, you don't need to change the Kubernetes configuration files. Master and Node services will point to each other on localhost and services are made available only on localhost.
+
+. *Pull Kubernetes containers*: To pull the Kubernetes container images, type the following:
+
++
+....
+# docker pull registry.access.redhat.com/rhel7/kubernetes-apiserver
+# docker pull registry.access.redhat.com/rhel7/kubernetes-controller-mgr
+# docker pull registry.access.redhat.com/rhel7/kubernetes-scheduler
+....
+
+. *Create manifest files*: Create the following 
+apiserver-pod.json, controller-mgr-pod.json, and scheduler-pod.json files and put them in the */etc/kubernetes/manifests* directory. These files identify the images representing the three Kubernetes services that are started later by the *kubelet* service:
+
++
+*apiserver-pod.json*
+
++
+....
+{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "kube-apiserver"
+  },
+  "spec": {
+    "hostNetwork": true,
+    "containers": [
+      {
+        "name": "kube-apiserver",
+        "image": "rhel7/kubernetes-apiserver",
+        "command": [
+          "/usr/bin/kube-apiserver",
+          "--v=0",
+          "--address=0.0.0.0",
+          "--etcd_servers=http://127.0.0.1:2379",
+          "--service-cluster-ip-range=10.254.0.0/16",
+          "--admission_control=AlwaysAdmit"
+        ],
+        "ports": [
+          {
+            "name": "https",
+            "hostPort": 443,
+            "containerPort": 443
+          },
+          {
+            "name": "local",
+            "hostPort": 8080,
+            "containerPort": 8080
+          }
+        ],
+        "volumeMounts": [
+          {
+            "name": "etcssl",
+            "mountPath": "/etc/ssl",
+            "readOnly": true
+          },
+          {
+            "name": "config",
+            "mountPath": "/etc/kubernetes",
+            "readOnly": true
+          }
+        ],
+        "livenessProbe": {
+          "httpGet": {
+            "path": "/healthz",
+            "port": 8080
+          },
+          "initialDelaySeconds": 15,
+          "timeoutSeconds": 15
+        }
+      }
+    ],
+    "volumes": [
+      {
+        "name": "etcssl",
+        "hostPath": {
+          "path": "/etc/ssl"
+        }
+      },
+      {
+        "name": "config",
+        "hostPath": {
+          "path": "/etc/kubernetes"
+        }
+      }
+    ]
+  }
+}
+....
+
++
+*controller-mgr-pod.json*
+
++
+....
+{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "kube-controller-manager"
+  },
+  "spec": {
+    "hostNetwork": true,
+    "containers": [
+      {
+        "name": "kube-controller-manager",
+        "image": "rhel7/kubernetes-controller-mgr",
+        "volumeMounts": [
+          {
+            "name": "etcssl",
+            "mountPath": "/etc/ssl",
+            "readOnly": true
+          },
+          {
+            "name": "config",
+            "mountPath": "/etc/kubernetes",
+            "readOnly": true
+          }
+        ],
+        "livenessProbe": {
+          "httpGet": {
+            "path": "/healthz",
+            "port": 10252
+          },
+          "initialDelaySeconds": 15,
+          "timeoutSeconds": 15
+        }
+      }
+    ],
+    "volumes": [
+      {
+        "name": "etcssl",
+        "hostPath": {
+          "path": "/etc/ssl"
+        }
+      },
+      {
+        "name": "config",
+        "hostPath": {
+          "path": "/etc/kubernetes"
+        }
+      }
+    ]
+  }
+}
+....
+
++
+*scheduler-pod.json*
+
++
+....
+{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "kube-scheduler"
+  },
+  "spec": {
+    "hostNetwork": true,
+    "containers": [
+      {
+        "name": "kube-scheduler",
+        "image": "rhel7/kubernetes-scheduler",
+        "volumeMounts": [
+          {
+            "name": "config",
+            "mountPath": "/etc/kubernetes",
+            "readOnly": true
+          }
+        ],
+        "livenessProbe": {
+          "httpGet": {
+            "path": "/healthz",
+            "port": 10251
+          },
+          "initialDelaySeconds": 15,
+          "timeoutSeconds": 15
+        }
+      }
+    ],
+    "volumes": [
+      {
+        "name": "config",
+        "hostPath": {
+          "path": "/etc/kubernetes"
+        }
+      }
+    ]
+  }
+}
+....
+
+. *Configure the kubelet service*: Because the manifests define Kubernetes services as pods, the *kubelet* service is needed to start these containerized Kubernetes services. To configure the *kubelet* service, edit the */etc/kubernetes/kubelet* and modify the KUBELET_ARGS line to read as follows (all other content can stay the same):
+
++
+....
+KUBELET_ADDRESS="--address=127.0.0.1"
+KUBELET_HOSTNAME="--hostname-override=127.0.0.1"
+KUBELET_ARGS="--register-node=true --config=/etc/kubernetes/manifests --register-schedulable=true"
+KUBELET_API_SERVER="--api-servers=http://127.0.0.1:8080"
+KUBELET_POD_INFRA_CONTAINER="--pod-infra-container-image=registry.access.redhat.com/rhel7/pod-infrastructure:latest"
+....
+
+. *Start kubelet and other Kubernetes services*: Start and enable the docker, etcd, kube-proxy and kubelet services as follows:
++
+....
+# for SERVICES in docker etcd kube-proxy kubelet; do
+    systemctl restart $SERVICES
+    systemctl enable $SERVICES
+    systemctl is-active $SERVICES
+done
+....
+
+. *Start the Kubernetes Node service daemons*: You need to start several services associated with a Kubernetes Node:
++
+....
+# for SERVICES in docker kube-proxy.service kubelet.service; do
+    systemctl restart $SERVICES
+    systemctl enable $SERVICES
+    systemctl status $SERVICES
+done
+....
+
+. *Check the services*: Run the ss command to check which ports the services are running on:
++
+....
+# ss -tulnp | grep -E "(kube)|(etcd)"
+....
+
+. *Test the etcd service*: Use the `curl` command as follows to check the etcd service:
++
+....
+# curl -s -L http://localhost:2379/version
+{"etcdserver":"3.0.15","etcdcluster":"3.0.0"}
+....
+
+==== Launching container pods with Kubernetes
+
+With Master and Node services running on the local system and the two container images in place, you can now launch the containers using Kubernetes pods. Here are a few things you should know about that:
+
+* *Separate pods*: Although you can launch multiple containers in a single pod, by having them in separate pods each container can replicate multiple instances as demands require, without having to launch the other container.
+
+* *Kubernetes service*: This procedure defines Kubernetes services for the database and web server pods so containers can go through Kubernetes to find those services. In this way, the database and web server can find each other without knowing the IP address, port number, or even the node the pod providing the service is running on.
+
+The following steps show how to launch and test the two pods:
+
+*IMPORTANT*: It is critical that the indents in the YAML file be maintained. Spacing in YAML files are part of what keep the format cleaner (not requiring curly braces or other characters to maintain the structure).
+
+. *Create a Database Kubernetes service*: Create a *db-service.yaml* file to identify the pod providing the database service to Kubernetes.
+
++
+....
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: db
+  name: db-service
+  namespace: default
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: db
+....
+
+. *Create a Database server replication controller file*: Create a *db-rc.yaml* file that you will use to deploy the Database server pod. Here is what it could contain:
++
+....
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: db-controller
+spec:
+  replicas: 1
+  selector:
+    app: "db"
+  template:
+    metadata:
+      name: "db"
+      labels:
+        app: "db"
+    spec:
+      containers:
+      - name: "db"
+        image: "localhost:5000/dbforweb"
+        ports:
+        - containerPort: 3306
+....
+
+
+. *Create a Web server Kubernetes Service file*: Create a *webserver-service.yaml* file that you will use to deploy the Web server pod. Here is what it could contain:
++
+....
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: webserver
+  name: webserver-service
+  namespace: default
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: webserver
+....
+
+. *Create a Web server replication controller file*: Create a *webserver-rc.yaml* file that you will use to deploy the Web server pod. Here is what it could contain:
++
+....
+kind: "ReplicationController"
+apiVersion: "v1"
+metadata:
+  name: "webserver-controller"
+spec:
+  replicas: 1
+  selector:
+    app: "webserver"
+  template:
+    spec:
+      containers:
+        - name: "apache-frontend"
+          image: "localhost:5000/webwithdb"
+          ports:
+            - containerPort: 80
+    metadata:
+      labels:
+        app: "webserver"
+        uses: db
+....
+
+
+. *Orchestrate the containers with kubectl*: With the two YAML files in the current directory,
+run the following commands to start the pods to begin running the containers:
++
+....
+# kubectl create -f db-service.yaml
+services/db-service
+# kubectl create -f db-rc.yaml
+replicationcontrollers/db-controller
+# kubectl create -f webserver-service.yaml
+services/webserver-service
+# kubectl create -f webserver-rc.yaml
+replicationcontrollers/webserver-controller
+....
+. *Check rc, pods, and services*: Run the following commands to make sure that Kubernetes master services, the replication controllers, pods, and services are all running:
+
++
+....
+# kubectl cluster-info
+Kubernetes master is running at http://localhost:8080
+# kubectl get rc
+NAME                   DESIRED   CURRENT   READY     AGE
+db-controller          1         1         1         7d
+webserver-controller   1         1         1         7d
+# kubectl get pods --all-namespaces=true
+NAMESPACE   NAME                                READY     STATUS    RESTARTS   AGE
+default     db-controller-kf126                 1/1       Running   9          7d
+default     kube-apiserver-127.0.0.1            1/1       Running   0          29m
+default     kube-controller-manager-127.0.0.1   1/1       Running   4          7d
+default     kube-scheduler-127.0.0.1            1/1       Running   4          7d
+default     webserver-controller-l4r2j          1/1       Running   9          7d
+# kubectl get service --all-namespaces=true
+NAMESPACE   NAME                CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+default     db-service          10.254.109.7    <none>        3306/TCP   7d
+default     kubernetes          10.254.0.1      <none>        443/TCP    8d
+default     webserver-service   10.254.159.86   <none>        80/TCP     7d
+....
+
+. *Check containers*: If both containers are running and the Web server container can see the Database server,
+you should be able to run the curl command to see that everything is working, as follows (note that the IP address matches webserver-service address):
++
+....
+# http://10.254.159.86:80/cgi-bin/action
+<html>
+<head>
+<title>My Application</title>
+</head>
+<body>
+<h2>RedHat rocks</h2>
+<h2>Success</h2>
+</body>
+</html>
+....
+
+If you have a Web browser installed on the localhost, you can open that Web browser to see a better representation of the
+few lines of output. Just open the browser to this URL: *http://10.254.159.86/cgi-bin/action*.
+
+=== Exploring Kubernetes pods
+If something goes wrong along the way, there are several ways to determine what happened. One thing you can do is to examine services inside of the containers. To do that, you can look at the logs inside the container to see what happened. Run the following command (replacing the last argument with the pod name you want to examine).
+....
+# kubectl logs kube-controller-manager-127.0.0.1
+....
+
+Another problem that people have had comes from forgetting to disable firewalld. If firewalld is active, it could block access to ports when a service tries to access them between your containers. Make sure you have run *systemctl stop firewalld ; systemctl disable firewalld* on your host.
+
+If you made a mistake creating your two-pod application, you can delete the replication controllers and the services. (The pods will just go away when the replication controllers are removed.) After that, you can fix the YAML files and create them again. Here's how you would delete the replication controllers and services:
+
+....
+# kubectl delete rc webserver-controller
+replicationcontrollers/webserver-controller
+# kubectl delete rc db-controller
+replicationcontrollers/db-controller
+# kubectl delete service webserver-service
+services/webserver-service
+# kubectl delete service db-service
+....
+
+Remember to not just delete the pods. If you do, without removing the replication controllers, the replication controllers will just start new pods to replace the ones you deleted.
+
+The example you have just seen is a simple approach to getting started with Kubernetes. Because it involves only one master and one node on the same system, it is not scalable. To set up a more formal and permanent Kubernetes configuration, Red Hat recommends using link:https://access.redhat.com/documentation/en/openshift-container-platform/[OpenShift Container Platform].

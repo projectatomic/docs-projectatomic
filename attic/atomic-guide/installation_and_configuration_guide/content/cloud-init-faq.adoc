@@ -1,0 +1,349 @@
+[[setting-up-cloud-init]]
+Red Hat Enterprise Linux Atomic Host uses cloud-init to configure the system
+during installation and first-boot. Cloud-init was initially developed to provide
+early initialization of cloud instances. In Red Hat Enterprise Linux Atomic Host
+it can also be used for virtual machine installations.
+
+The files used by cloud-init are YAML formatted files.
+
+NOTE: cloud-init is run only the first time that the machine is booted.
+If cloud-init fails because of syntax errors in the file or doesn't contain all
+of the needed directives, such as user credentials, a new instance must be
+created and launched. Restarting the failed instance with a new cloud-init file
+will *not* work.
+
+Here are some examples of how to do common tasks with cloud-init.
+
+* How do I create users with cloud-init?
++
+To create users with cloud-init, you must create two files: *meta-data* and *user-data*,
+and then package them into an ISO image.
+
+. Make a directory and move into it:
++
+....
+$ mkdir cloudinitiso
+$ cd cloudinitiso
+....
+
+. Create a file called meta-data. Add the following to the file called meta-data:
++
+....
+instance-id: Atomic0
+local-hostname: atomic-00
+....
+
+. Create a file called user-data. Add the following to the file called user-data:
++
+....
+#cloud-config
+password: atomic
+chpasswd: {expire: False}
+ssh_pwauth: True
+ssh_authorized_keys:
+  - ssh-rsa AAA...SDvZ user1@domain.com
+....
++
+Note: The final line of the *user-data* file above is an SSH public key.
+SSH public keys are found in *~/.ssh/id_rsa.pub*.
+
+. Create an ISO image that includes *meta-data* and *user-data*:
++
+....
+# genisoimage -output atomic0cidata.iso -volid cidata -joliet -rock user-data meta-data
+....
+
+. A file named *atomic0cidata.iso* is generated. Attach this file to the machine on
+which you plan to install Red Hat Enterprise Linux Atomic Host, and your
+username will be "cloud-user" and your password will be "atomic".
+
+* How do I expire the cloud-user's password so that the user must change it during their first login?
++
+To force "cloud-user" to change their password at first login, change the line
+`chpasswd: {expire: False}` to `chpasswd: {expire: True}` in the *user-data* file.
++
+....
+#cloud-config
+password: atomic
+chpasswd: {expire: True}
+ssh_pwauth: True
+ssh_authorized_keys:
+  - ssh-rsa AAA...SDvz user1@yourdomain.com
+  - ssh-rsa AAB...QTuo user2@yourdomain.com
+....
++
+This works because the password and chpasswd operate on the default user unless otherwise indicated.
++
+Note: This is a global setting. If you set this to True all users who are created
+(see below) will have to change their password.
+
+* How do I change the default username?
++
+To change the default username from cloud-user to something else, add the
+line `user: username` to the *user-data* file:
++
+....
+#cloud-config
+user: username
+password: atomic
+chpasswd: {expire: False}
+ssh_pwauth: True
+ssh_authorized_keys:
+  - ssh-rsa AAA...SDvz user1@yourdomain.com
+  - ssh-rsa AAB...QTuo user2@yourdomain.com
+....
+
+* How do I set the root password?
++
+To set the root password you must create a user list in the `chpasswd` section of
+the user-data file. The format of the list is shown below.
+Whitespace is significant, so do not include any on either side of the colon
+(`:`) as it will set a password with a space in it.
+If you use this method to set the user passwords, *all passwords* must be set in
+this section. This means that the `password:` line must be moved from the top
+and into this section.
++
+....
+#cloud-config
+ssh_pwauth: True
+ssh_authorized_keys:
+  - ssh-rsa AAA...SDvz user1@yourdomain.com
+  - ssh-rsa AAB...QTuo user2@yourdomain.com
+chpasswd:
+  list: |
+     root:password
+     cloud-user:atomic
+  expire: False
+....
+
+* How do I add more users during initial system configuration? How do I set additional user options?
++
+Users are created and described in the users section of the user-data file.
+Adding this section requires that options for the default user be set here as well.
++
+If the first entry in the _users_ section is `default`, the default user, _cloud-user_
+will be created along with the other users. If the default line is omitted, then
+_cloud-user_ is not created.
++
+....
+#cloud-config
+users:
+  - default
+  - name: foobar
+    gecos: User N. Ame
+    selinux-user: staff_u
+    groups: users,wheel
+    ssh_pwauth: True
+    ssh_authorized_keys:
+      - ssh-rsa AA..vz user@domain.com
+chpasswd:
+  list: |
+    root:password
+    cloud-user:atomic
+    foobar:foobar
+  expire: False
+....
++
+Note: By default users will be labeled as unconfined_u if there is not an _se-linux-user_ value.
++
+Note: This example places the user _foobar_ into two groups: `users` and `wheel`.
+As of cloud-init 0.7.5, no whitespace is supported in the group list: https://bugzilla.redhat.com/show_bug.cgi?id=1126365[BZ 1126365]
+
+* How do I run first boot commands?
++
+The `runcmd` and `bootcmd` sections of the _user-data_ file can be used to execute
+arbitrary commands during startup and initialization. The `bootcmd` section is run
+early in the initialization process. The `runcmd` section is executed near the end
+of the process by init. These commands are *not* saved for future boots and will
+only be executed during the first initialization-boot.
++
+....
+#cloud-config
+users:
+  - default
+  - name: foobar
+    gecos: User N. Ame
+    groups: users
+chpasswd:
+  list: |
+    root:password
+    fedora:atomic
+    foobar:foobar
+  expire: False
+bootcmd:
+ - echo New MOTD >> /etc/motd
+runcmd:
+ - echo New MOTD2 >> /etc/motd
+....
+
+* How do I add additional sudoers?
++
+A user can be configured as a sudoer by adding a sudo and groups entry to the
+users section of the user-data file, as shown below.
++
+....
+#cloud-config
+users:
+  - default
+  - name: foobar
+    gecos: User D. Two
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    groups: wheel,adm,systemd-journal
+    ssh_pwauth: True
+    ssh_authorized_keys:
+      - ssh-rsa AA...vz user@domain.com
+chpasswd:
+  list: |
+    root:password
+    cloud-user:atomic
+    foobar:foobar
+  expire: False
+....
+
+* How do I set up a static networking configuration?
++
+Add a `network-interfaces` section to the _meta-data_ file. This section contains the
+usual set of networking configuration options.
++
+Because of a current https://bugs.launchpad.net/cloud-init/+bug/1225922[bug] in cloud-init,
+static networking configurations are not automatically started.
+Instead the default DHCP configuration remains active. A suggested work around
+is to manually stop and restart the network interface via the `bootcmd` directive.
++
+....
+network-interfaces: |
+  iface eth0 inet static
+  address 192.168.1.10
+  network 192.168.1.0
+  netmask 255.255.255.0
+  broadcast 192.168.1.255
+  gateway 192.168.1.254
+bootcmd:
+  - ifdown eth0
+  - ifup eth0
+....
+
+* How do I delete cloud-user and just have root and no other users?
++
+To have only a root user created, create an entry for root in the `users` section of
+the _user-data_ file. This section can be as simple as just a `name` option:
++
+....
+users:
+  - name: root
+chpasswd:
+  list: |
+    root:password
+  expire: False
+....
++
+Optionally, you can set up SSH keys for the root user as follows:
++
+....
+users:
+  - name: root
+    ssh_pwauth: True
+    ssh_authorized_keys:
+      - ssh-rsa AA..vz user@domain.com
+....
+
+* How do I set up storage with docker-storage-setup?
++
+To set up the size of the root logical volume to 6GB for example instead of the default 3GB,
+use the `write_files` directive in _user-data_:
++
+....
+write_files:
+  - path: /etc/sysconfig/docker-storage-setup
+    permissions: 0644
+    owner: root
+    content: |
+    ROOT_SIZE=6G
+....
+
+* How do I enable the Overlay Graph Driver?
++
+The Overlay Graph Driver is enabled through _docker-storage-setup_. Use the `runcmd`
+directive to change the STORAGE_DRIVER option to "overlay". You also need to disable
+SELinux:
++
+....
+runcmd:
+  - sed -i '/OPTIONS=/s/--selinux-enabled//' /etc/sysconfig/docker
+  - echo "STORAGE_DRIVER=overlay" >> /etc/sysconfig/docker-storage-setup
+....
++
+[NOTE]
+Note that changing the backend storage driver is a destructive operation. Furthermore,
+OverlayFS is not POSIX-compliant and it can be used with restrictions. For more information,
+see https://documentation-devel.engineering.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/7.2_Release_Notes/technology-preview-file_systems.html[RHEL 7.2 Release Notes].
+
+* How do I manage Red Hat subscriptions with cloud-init?
++
+The `rh_subscription` directive can be used to perform various operations concerning
+registering your system. Following are a few examples showing different available options:
++
+....
+rh_subscription:
+  username: atomic@redhat.com
+  password: '<password>'
+  auto-attach: True
+  service-level: self-support
+....
++
+Note that service-level is only used with the auto-attach option.
+Alternatively, you can use an activation key and org instead of username and password:
++
+....
+rh_subscription:
+  activation-key: example_key
+  org: 12345
+  auto-attach: True
+....
++
+There is also support for adding pools. The following is the equivalent of the
+`subscription-manager attach --pool=XYZ01234567` command:
++
+....
+rh_subscription:
+  username: atomic@redhat.com
+  password: '<password>'
+  add-pool: XYZ01234567
+....
++
+You can set up the server hostname in _/etc/rhsm/rhsm.conf_ with the following:
++
+....
+rh_subscription:
+  username: atomic@redhat.com
+  password: '<password>'
+  server-hostname: atomic.example.com
+  auto-attach: True
+....
+
+
+* How do I re-run cloud-init on an instance?
++
+In most situations it is not possible to re-run cloud-init to change the configuration
+of a virtual machine that has already been created.
++
+When cloud-init is used in an environment where the Instance ID can be changed
+(for instance, from *Atomic0* to *Atomic1*), it is possible to re-configure an
+existing virtual machine *by changing the Instance ID and rebooting to re-run
+cloud-init*. This is not recommended practice for production environments
+because cloud-init is supposed to be set up to create on first boot systems
+that are fully and properly configured.
++
+In most IAAS implementations it is not possible to change the Instance ID.
+If cloud-init must be re-run, the instance should be cloned in order to obtain a new Instance ID.
+
+* Can I put shell scripts in bootcmd and runcmd?
++
+Yes. If you use a list value for `bootcmd` or `runcmd`, each list item is run in turn
+using `execve`. If you use a string value, then the entire string is run as a shell
+script. Alternatively, if you want simply to use cloud-init to run a shell script,
+you can provide a shell script (complete with shebang (#!) ) instead of providing cloud-init
+with a '.yaml' file.
+
+See this http://cloudinit.readthedocs.org/en/latest/topics/examples.html#run-commands-on-first-boot[website]
+for examples of how to put shell scripts in `bootcmd` and `runcmd`.

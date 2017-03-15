@@ -1,0 +1,13 @@
+<productname>Red Hat Enterprise Linux Atomic Host</productname>
+<productnumber>7</productnumber>
+<subtitle>Managing Containers</subtitle>
+<abstract>
+ <para>Manage regular and super-privileged containers with systemd, runc, and skopeo</para>
+</abstract>
+<authorgroup>
+  <org>
+    <orgname>Red Hat Atomic Host Documentation Team</orgname>
+    <email>appinfra-docs@redhat.com</email>
+  </org>
+</authorgroup>
+<xi:include href="Common_Content/Legal_Notice.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />

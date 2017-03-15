@@ -1,0 +1,94 @@
+=== Package Layering
+
+Package layering is a functionality of the *rpm-ostree* tool that allows you to add packages that are not part of the original OSTree permanently to the system. This functionality is useful when you need to install a certain package on a single machine, without affecting other machines that share the same OSTree. An example use case of package layering is installing diagnostics tools, such as *strace*.
+
+To install a layered package and its dependencies on RHEL Atomic Host, run the following command:
+
+....
+# rpm-ostree pkg-add <package>
+....
+
+To remove a layered package, use the following command:
+
+....
+# rpm-ostree pkg-remove <package>
+....
+
+After adding or removing packages with *pkg-add* and *pkg-remove*, reboot your system for the changes to take effect. You can find out which packages have been manually installed on the system by running *atomic host status*.
+
+The following is an example of installing *strace* on RHEL Atomic Host and how to verify it is part of the OSTree:
+
+....
+-bash-4.2# rpm-ostree status
+State: idle
+Deployments:
+● rhel-atomic-host-ostree:rhel-atomic-host/7/x86_64/standard
+       Version: 7.2.6 (2016-07-29 19:54:25)
+        Commit: b672bf8a457cb28e003dee20c53749636ef5fce3e4743afe4aaad269d3aaa62a
+        OSName: rhel-atomic-host
+-bash-4.2# rpm-ostree pkg-add strace
+notice: pkg-add is a preview command and subject to change.
+
+Downloading metadata: [====================================================] 100%
+Resolving dependencies... done
+Checking out tree b672bf8... done
+Overlaying... done
+Writing rpmdb... done
+Writing OSTree commit... done
+Copying /etc changes: 31 modified, 4 removed, 67 added
+Transaction complete; bootconfig swap: yes deployment count change: 1
+Added:
+  strace-4.8-11.el7.x86_64
+Run "systemctl reboot" to start a reboot
+-bash-4.2# rpm-ostree  status
+State: idle
+Deployments:
+  rhel-atomic-host-ostree:rhel-atomic-host/7/x86_64/standard
+       Version: 7.2.6 (2016-08-02 14:04:15)
+    BaseCommit: b672bf8a457cb28e003dee20c53749636ef5fce3e4743afe4aaad269d3aaa62a
+        Commit: 24f1ce8a7124dd3963012f9b7e9fb1b9b36dc2277afded186d4353864f29dcff
+        OSName: rhel-atomic-host
+      Packages: strace
+
+● rhel-atomic-host-ostree:rhel-atomic-host/7/x86_64/standard
+       Version: 7.2.6 (2016-07-29 19:54:25)
+        Commit: b672bf8a457cb28e003dee20c53749636ef5fce3e4743afe4aaad269d3aaa62a
+        OSName: rhel-atomic-host
+....
+
+Notes and limitations:
+
+- If you run *rpm-ostree pkg-add* several times consecutively without rebooting, only the most recent command will take effect. If you install *wget* and *strace* consecutively and reboot afterwards, only *strace* will be present after reboot. To add multiple packages onto a new deployment, specify them all on the same line with the command. For example:
+
+....
+# rpm-ostree pkg-add wget strace
+....
+
+- Installing packages which contain files owned by users other than root is currently not supported. For example, the *httpd* package contains files with a group ownership of *apache*, installing it will fail:
+
+....
+# rpm-ostree pkg-add httpd
+notice: pkg-add is a preview command and subject to change.
+
+Downloading metadata: [====================] 100%
+Resolving dependencies... done
+error: Unpacking httpd-2.4.6-40.el7_2.4.x86_64: Non-root ownership currently unsupported: path "/run/httpd" marked as root:apache)
+....
+
+- After *rpm-ostree pkg-add*, do not use *atomic host deploy* or *rpm-ostree deploy* to deploy a specific version OSTree version older than 7.2.6. If you attempt to deploy to such a version after *rpm-ostree pkg-add*, the system will be left in a state where you will be unable to use *atomic host upgrade* or *rpm-ostree upgrade* to upgrade to the next release. However, *atomic host rollback* or *rpm-ostree rollback* will still be successful and bring the system back to the previous deployment.
+
+=== "ostree admin unlock"
+
+*ostree admin unlock* unlocks the current ostree deployment and allows packages to be installed temporarily by mounting a writable overlayfs on _/usr_. However, the packages installed afterwards will not persist after reboot. *ostree admin unlock* also has certain limitations and known issues with overlayfs and SELinux, so it should be used only for testing. For adding software, *rpm-ostree pkg-add* is recommended for long-term use.
+
+=== System Containers and Super-Privileged Containers (SPCs)
+
+In some cases, containerized services or applications require that they are run from a container image that is built in a different than the default way for Docker-formatted containers. Such special case containers are the Super-Privileged Containers (SPCs), and the system containers. They are necessary in two situations:
+
+* *SPCs*: When a certain container needs more privileges and access to the host.
+
+Super-Privileged Containers are run with special privileges to the host computer, and unlike the default Docker-formatted containers, are able to modify the host. Tools for monitoring and logging are containzerized in SPCs so they can have the access to the host they requires. Such SPCs are *rsyslog*, *sadc*, and the *atomic-tools* container. For detailed information about SPCs, see link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/7/single/managing-containers/#running_super_privileged_containers[Running Super-Privileged Containers] chapter from the Red Hat Enterprise Linux Atomic Host Managing Containers Guide.
+
+* *System Containers*: A certain container needs to run independently of the docker daemon.
+
+System containers are a way to containerize services which are needed before the docker daemon is running. Such services configure the environment for docker, (for example setting up networking), so they can't be run _by_ the docker daemon and because of that, they are not Docker-formatted images. They use *runc* for runtime, *ostree* for storage, *skopeo* for searching and pulling from a registry and systemd for management. A system container is executed from a systemd UNIT file using the *runc* utility. Additionally, containerizing such services is a way to make the ostree system image smaller. Such System Containers are *etcd* and *flannel*. For detailed information, see link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/7/single/managing-containers/#running_system_containers[Running System Containers] chapter from the Red Hat Enterprise Linux Atomic Host Managing Containers Guide.

@@ -1,0 +1,3 @@
+Red Hat Enterprise Linux Atomic Host should run on any computer or cloud environment that supports 64-bit Red Hat Enterprise Linux systems. The most recent list of supported hardware can be found in the https://hardware.redhat.com/[Red Hat Hardware Compatibility List]. Also see https://access.redhat.com/site/articles/rhel-limits[Red Hat Enterprise Linux technology capabilities and limits] for general information about system requirements. 
+
+Keep in mind that though Atomic Host can run on bare metal, it is particularly suited for running in cloud environments where its size and efficiency as a container run-time environment are particularly useful.

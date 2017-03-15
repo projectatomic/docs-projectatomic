@@ -1,0 +1,8 @@
+Red Hat Enterprise Linux Atomic Host is distributed in multiple formats and able to be installed on bare-metal,
+in multiple virtual environments and in public and private cloud infrastructures.
+
+You can find the installation media on the
+https://access.redhat.com/products/red-hat-enterprise-linux/atomic-host[Red Hat Enterprise Linux Atomic Host Product Page] when you click
+the *Download* button under *Installation Media*.
+Complete installation instructions can be found in the
+https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Installation_Guide/index.html[Red Hat Enterprise Linux Installation Guide].

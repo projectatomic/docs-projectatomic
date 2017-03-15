@@ -1,0 +1,8 @@
+= CLI Reference
+:imagesdir: images
+
+== Overview
+include::content/atomic_cli_overview.adoc[]
+
+== Atomic Commands
+include::content/atomic_cli_commands.adoc[]

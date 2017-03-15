@@ -1,0 +1,81 @@
+=== Atomic Host
+
+*OStree update*:
+
+New Tree Version: 7.2.4 (hash: b060975ce3d5abbf564ca720f64a909d1a4d332aae39cb4de581611526695a0c) +
+Changes since Tree Version 7.2.3-1 (hash: 644fcc603549e996f051b817ba75a746f23f392cfcc7e05ce00342dec6084ea8)
+
+*Updated packages*:
+
+* cockpit-ostree-0.103-1.el7
+
+*New packages*:
+
+* atomic-devmode-0.3.3-3.el7 (Technology Preview) *
+
+=== Extras
+
+*Updated packages*:
+
+* cockpit-0.103-1.el7
+* docker-1.9.1-40.el7
+* docker-distribution-2.4.0-2.el7 *
+* kubernetes-1.2.0-0.11.git738b760.el7
+* runc-0.1.0-3.el7 (Technology Preview) *
+
+*New packages*:
+
+* docker-latest-1.10.3-22.el7
+
+The asterisk (*) marks packages which are available for Red Hat Enterprise Linux only.
+
+==== Container Images
+
+*Updated*:
+
+*	Red Hat Enterprise Linux Container Image (rhel7/rhel)
+*	Red Hat Enterprise Linux Atomic Tools Container Image (rhel7/rhel-tools)
+*	Red Hat Enterprise Linux Atomic rsyslog Container Image (rhel7/rsyslog)
+*	Red Hat Enterprise Linux Atomic sadc Container Image (rhel7/sadc)
+*	Red Hat Enterprise Linux Atomic cockpit-ws Container Image (rhel7/cockpit-ws)
+*	Red Hat Enterprise Linux Atomic etcd Container Image (rhel7/etcd)
+*	Red Hat Enterprise Linux Atomic Kubernetes-controller Container Image (rhel7/kubernetes-controller-mgr)
+*	Red Hat Enterprise Linux Atomic Kubernetes-apiserver Container Image (rhel7/kubernetes-apiserver)
+*	Red Hat Enterprise Linux Atomic Kubernetes-scheduler Container Image (rhel7/kubernetes-scheduler)
+*	Red Hat Enterprise Linux Atomic SSSD Container Image (rhel7/sssd) (Technology Preview)
+
+=== New Features
+
+*  *Beginning with the Atomic Host 7.2.4 release, two versions of the docker service will be included in the operating system: docker 1.9 and docker 1.10.*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1335317
++
+The following Knowledgebase article contains all information you need to know about using these two versions of docker: https://access.redhat.com/articles/2317361.
+
+* *Introduced conflict between docker 1.9 and atomic-openshift 3.1 / origin 1.1 has been removed*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1324130
++
+Previously, due to stability issues between docker 1.9 and atomic-openshift 3.1 / origin 1.1, docker 1.9 has been packaged to conflict with atomic-openshift versions older than 3.2 and origin versions older than 1.2. As a consequence, running yum update on an OpenShift Enterprise 3.1 system failed due to that introduced conflict. This bug has been fixed, and running yum update now does not cause conflicts, successfully solves the dependencies and installs docker 1.9.
+
+* *Updated kubernetes packages*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1327666
++
+Kubernetes updated to ose v3.2.0.16 corresponding to Kubernetes v1.2.0. Additionally, support for exposing secret keys in environment variables introduced.
+
+* *Cockpit has been rebased to version 0.103*
++
+// https://bugzilla.redhat.com/show_bug.cgi?id=1327780
++
+Most notable changes:
++
+** When Cockpit fails to connect to a host, relevant SSH command or host details are now displayed to help resolve the issue.
+** Docker restart policy can now be configured when starting a new container.
+** Creating logical volumes has been combined into a single dialog.
+** Joining IPA domains no longer offers a Computer OU option.
+** Binary journal data is now displayed correctly.
+** Disk or file system sizes are displayed using IEC names, such as MiB.
+** Logical volumes can no longer be shrunk and the file system partition dialog prevents negative sizes.
+** Strict Content-Security-Policy is implemented on most of Cockpit to prevent a number of browser based attacks.
+The packages also include numerous other bug fixes and admin interface improvements.

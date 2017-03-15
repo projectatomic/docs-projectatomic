@@ -1,0 +1,53 @@
+To check that the application is working, you can run a couple of *curl* commands to get data from the Web server.  To check that you cluster is working properly, there are some *kubectl* commands you can run.
+
+. *Check Web server*: Run the following commands to get data from the Web server. Use the pod address to access the web service:
++
+....
+# kubectl get endpoints | grep web
+NAME                ENDPOINTS                         AGE
+webserver-service   10.20.11.3:80,10.20.55.2:80       3d
+# curl http://10.20.11.3/index.html
+The Web Server is Running
+# curl http://10.20.11.3/cgi-bin/action
+<html>
+<head>
+<title>My Application</title>
+</head>
+<body>
+<h2>RedHat rocks</h2>
+<h2>Success</h2>
+</body>
+</html>
+....
+
+. *Check the Kubernetes Cluster*: Here are some commands you can run from the master to check the cluster:
++
+....
+# kubectl get pods
+# kubectl get replicationControllers
+# kubectl get services
+# kubectl get nodes
+....
+
+. *Check Kubernetes Nodes and Pause Containers*:
+If a pod remains in a Pending state for a long time, it might be because the container the pod is trying to launch is not able to start on the selected node. To check out the containers running on a particular node, log into that node, and type the *docker ps* command:
+
++
+....
+# docker ps
+CONTAINER ID   IMAGE                                COMMAND                  CREATED       STATUS      PORTS NAMES
+b28a863e0aca   registry.example.com:5000/dbforweb   "/usr/bin/mysqld_safe"   2 hours ago   Up 2 hours        k8s_db...
+b138c90519a1   registry.example.com:5000webwithdb   "/usr/sbin/httpd -D F"   2 hours ago   Up 2 hours        k8s_apache...
+872c5acf3ec8   gcr.io/google_containers/pause:2.0   "/pause"                 2 hours ago   Up 2 hours        k8s_POD...
+e117af93e4f4   gcr.io/google_containers/pause:2.0   "/pause"                 2 hours ago   Up 2 hours        k8s_POD...
+....
++
+The output above shows that we successfully launched the two replication controllers from the master. The dbforweb and webwithdb containers are running on this node. Notice, however, that two other containers, running the command */pause* appear in the list of running containers as well.
++
+A *pause* container is a special type of container. The one shown here comes from the upstream Kubernetes project. For each pod, a pause container is used to keep the networking namespace reserved on a node when it is the last one in a pod, so that namespace can remain in place as pods come and go. All the default *pause* container does is sleep. This container gets pulled in automatically by Kubernetes.
++
+A potential problem with the *pause* container is that if you want to run your Kubernetes cluster in a way that is disconnected from the registry from which this needs to be pulled, you need to make sure the *pause* container is pulled before you disconnect.
++
+There are other *pause* containers available to use instead of the default one shown in the previous example. An official pause container from Red Hat called *rhel7/pod-infrastructure* will soon be available to use.
+
+

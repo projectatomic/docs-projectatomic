@@ -1,0 +1,69 @@
+==== Overview
+
+The rhevm-guest-agent container image is a Docker-formatted container that is used to run an agent inside of virtual machines on Red Hat Virtualization hosts. Communications between that agent and the Red Hat Virtualization Manager allows that manager to both monitor and change the state of the agent's virtual machine.
+
+This topic describes how to get and run the rhevm-guest-agent container.
+
+===== Overview of the rhevm-guest-agent Container
+
+A rhevm-guest-agent running inside a virtual machine on a Red Hat Virtualization host allows a Red Hat Virtualization Manager (RHV-M) to access data and control the state of that virtual machine (VM). That agent provides information to the RHV-M that include heart-beat data, CPU usage, IP addresses, installed applications, and other content related to the health and processing of the virtual machine. Likewise, through the agent, the RHEV-M can shutdown, restart or check the status of the virtual machine.
+
+==== Getting and Running the RHEL rhevm-guest-agent Container
+
+To use the rhevm-guest-agent container on a RHEL or RHEL Atomic host system, you need to install it and run it as described in the following procedure:
+
+. *Install RHEL or RHEL Atomic Host*: Install and configure a RHEL or RHEL Atomic host system as a virtual machine in a Red Hat Virtualization environment (from the RHV Manager). The rhevm-guest-agent is made to run on a RHEL system on a RHEV Host so it can be managed by a RHV Manager.
+
+. *Pull the rhevm-guest-agent container*: While logged into the virtual machine, pull the rhevm-guest-agent container as follows:
++
+....
+# docker pull registry.access.redhat.com/rhev4/rhevm-guest-agent
+Using default tag: latest
+Trying to pull repository registry.access.redhat.com/rhev4/rhevm-guest-agent ...
+latest: Pulling from registry.access.redhat.com/rhev4/rhevm-guest-agent
+16dc1f96e3a1: Pull complete
+83abca08dea6: Pull complete
+Digest: sha256:0ea0bf8729957454e1f134747d7539e37ea128f39e9757271eea4cbba8737655
+Status: Downloaded newer image for registry.access.redhat.com/rhev4/rhevm-guest-agent:latest
+....
+
+. *Install the rhevm-guest-agent container*: Use the *atomic* command to install the rhevm-guest-agent container as follows:
++
+....
+# atomic install rhev4/rhevm-guest-agent
+docker run --rm --privileged --pid=host -v /:/host -e HOST=/host -e IMAGE=rhev4/rhevm-guest-agent -e NAME=rhevm-guest-agent rhev4/rhevm-guest-agent /usr/local/bin/ovirt-guest-agent-install.sh
+Host group is
+Creating ovirtagent group on host system
+Host user is
+Creating ovirtagent user on host system
+....
++
+Notice that the process of installing the container on the hosts system includes opening privileges to the host system and creating ovirtagent user and group accounts on the host.
+
+. *Start the rhevm-guest-agent container*: To run the RHEL rhevm-guest-agent container, use the *atomic* command as follows:
++
+....
+# atomic run rhev4/rhevm-guest-agent
+docker run --privileged --pid=host --net=host -v /:/host -e HOST=/host -v /proc:/hostproc -v /dev/virtio-ports/com.redhat.rhevm.vdsm:/dev/virtio-ports/com.redhat.rhevm.vdsm --env container=docker --restart=always -e IMAGE=rhev4/rhevm-guest-agent -e NAME=rhevm-guest-agent rhev4/rhevm-guest-agent
+....
++
+After the *atomic* command starts, you can see the exact *docker* command that is run to start the rhevm-guest-agent container. In this case, the container is set to always restart if the service ever goes down (--restart=always). See the "Tips" section for information about privileges that are open to the host system.
+
+==== Tips for Running the rhevm-guest-agent Container
+
+Here are some tips to help you understand a few other issues related to running the rhevm-guest-agent container:
+
+* *Privileges opened*: The rhevm-guest-agent is a super privileged container, opening up various features on the host. Privileges rhevm-guest-agent opens include: --privileged (turns of security separation, allowing root access to the host), --pid=host (allows access to host process table), --net=host (allows access to host network interfaces), and -v /:/host (mount host's root file system in the container). Several other host assets are mounted inside the container as well. For more information on the implications of opening these privileges, see link:https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/version-7/getting-started-with-containers/#running_super_privileged_containers[Running Super-privileged Containers].
+
+* *Viewing rhevm-guest-agent*: The data made accessible by the rhevm-guest-agent can be displayed from the Red Hat Virtualization Manager. From the RHV-M web-based interface, select the virtual machine on which the agent is running to be able to view information collected from the agent about the health and activity of that virtual machine.
+
+* *Information, Notifications, and Actions*: The rhevm-guest-agent provides information, notifications, and actions to the RHV-M. To see details about what the rhevm-guest-agent provides, you can view the upstream link:http://wiki.ovirt.org/documentation/internal/guest-agent/guest-agent/[oVirt-guest-agent] page.
+
+* *Image and Container Lifecycle*
++
+If you want to upgrade to a newer version of the rhevm-guest-agent container image, it is not enough to merely download the new image with *docker pull*. You must also explicitly remove the existing rhevm-guest-agent container with the following commands, before re-running it, in order to create a fresh container from the new image:
++
+....
+# docker stop rhevm-guest-agent
+# docker rm rhevm-guest-agent
+....

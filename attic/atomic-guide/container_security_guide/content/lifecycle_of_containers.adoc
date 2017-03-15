@@ -1,0 +1,24 @@
+This chapter describes the lifecycle of the container. This chapter
+describes:
+
+1.  how CVEs are reported for containers
+2.  Where to find information about vulnerabilities
+3.  how to inspect container runtime settings
+4.  how to set up Satellite 6.1 as a private registry
+5.  how to federate access.registry.redhat.com
+6.  the partner CDK and image-verification process offered by Red Hat
+7.  where to find Red Hat Marketplace
+8.  how to acquire partner images
+9.  how to run images using RHEL Atomic
+10.  how Red Hat recommends that you scan Docker images
+11.  how OpenStack Enterprise and Atomic Platform consume Docker images from Satellite
+
+*Future Isses That This Section Might cover*
+
+- How CVE's are reported for containers and where to find vulnerability information
+- How to inspect container runtime settings - for example make sure users have not put RUN labels to add in security settings (like --spc) that they should not have done.
+- How we recommend to setup Satellite 6.1 as a private registry and show how we can federate access.registry.redhat.com 
+- The Partner CDK and image verification process we have in place.
+- Where to look for the Red Hat Marketplace and how to get hold of our partner images
+- How to then run images using RHEL/Atomic and how we would recommend you scan images (daily/weekly/monthly)
+- How OSE or Atomic Plaform can consume these images from Satellite (or do we see OSE consuming direct from the internet?)
