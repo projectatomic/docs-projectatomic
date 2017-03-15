@@ -1,0 +1,21 @@
+[welcome-index]
+= {product-title} Documentation
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+[.lead]
+Welcome to the {product-title} {product-version} Documentation. where you can find information and guides 
+for using and exploring {product-title}.
+
+Atomic Host from link:http://www.projectatomic.io[Project Atomic] is a lightweight, 
+container-based OS built upon the principle of immutable infrastructure using the LDK (Linux, Docker, Kubernetes) 
+stack. Atomic Hosts are built from standard RPM packages composed into filesystem 
+trees using link:https://rpm-ostree.readthedocs.io[RPM-OSTree].
+
+
+[TIP]
+====
+Use the left navigation bar to browse the documentation.
+====

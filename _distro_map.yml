@@ -1,0 +1,11 @@
+---
+atomic_host_docs:
+  name: Atomic Host
+  author: Project Atomic Documentation Project <atomic@projectatomic.io>
+  site: main
+  site_name: Atomic Host Documentation
+  site_url: http://docs.projectatomic.io/
+  branches:
+    master:
+      name: Latest
+      dir: latest
