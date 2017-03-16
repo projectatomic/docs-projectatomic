@@ -40,3 +40,10 @@ Topics:
       File: installing_cockpit
     - Name: How to Use
       File: using_cockpit
+
+---
+Name: Contribute Guide
+Dir: atomic-host-guide
+Topics:
+  - Name: How Can I Contribute
+    File: contribution_guide

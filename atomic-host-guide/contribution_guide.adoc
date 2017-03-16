@@ -1,0 +1,89 @@
+[contribution-guide]
+= {product-title} Documentation Contribution Guide
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+:imagesdir: {images}
+
+[.lead]
+link:http://www.projectatomic.io[Project Atomic] aims to build a welcoming and diverse community. 
+{product-title} Documentation focuses on convering Docs required for {product-title} introduction 
+to how to compose, manage and deploy {product-title} and its various application.
+
+
+=== Requirements
+
+* link:http://asciidoctor.org/docs/what-is-asciidoc/#what-is-asciidoc[AsciiDoc] markup language to write Docs.
+* link:http://asciidoctor.org[Asciidoctor] that acts as text processor to convert AsciiDoc content to HTML5, DocBook and others.
+* link:http://www.asciibinder.org[AsciiBinder] that helps to build, maintain documentation in easier way.
+
+
+=== Set up Development Environment
+
+....
+$ sudo dnf install ansible
+$ git clone https://github.com/projectatomic/atomic-host-docs.git
+$ git checkout -b <branch-name>
+$ cd atomic-host-docs
+$ ansible-playbook setup.yml --ask-sudo-pass
+....
+
+
+=== How to Write Doc
+
+{product-title} Documentation uses AsciiDoc markup language. You can have a look at the 
+link:http://asciidoctor.org/docs/asciidoc-syntax-quick-reference[Reference] for AsciiDoc Syntax.
+
+....
+$ mkdir atomic-host-guide/container && touch atomic-host-guide/container/overview.adoc
+....
+
+.atomic-host-guide/container/overview.adoc
+----
+[[container-overview]]
+= Container Overview
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+Container contains applications in a way to keep itself isolated from the host system that it runs on and 
+container allows developer to package an application with all of it parts, such as libraries and other packages
+it needs to run and ship it all as one package.
+I love Containers!!!
+----
+
+After the Doc is ready, we need to make entry in `_topic_map.yml` file. 
+This file tells AsciiBinder which *_topic_* groups and *_topics_* to generate.
+
+._topic_map.yml
+----
+---
+Name: Tools
+Dir: atomic-host-guide
+Topics:
+  - Name: Containers
+    Dir: container
+    Topics:
+    - Name: Overview
+      File: overview
+----
+
+Now go to the root directory of the repo. The following command will build the Documentation.
+....
+$ asciibinder
+....
+
+
+=== Verify
+
+A new directory will be created named `_preview`. You will be able to browse Documentation from there that you just build.
+
+This is how it will look like after the Doc is build:
+
+image::contribution-guide-demo.png[alt="Sunset", width="900", height="500"]
+=== Join the Community
+
+If you are interested joining the Project Atomic community, please refer to 
+link:http://www.projectatomic.io/community[Project-Atomic-Community].

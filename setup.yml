@@ -1,0 +1,23 @@
+---
+- name: Setup Development Environment
+  hosts: localhost
+  become: yes
+  become_method: sudo
+
+  tasks:
+    - name: Install the list of required packages
+      package: name={{ item }} state=installed
+      with_items:
+      - gcc
+      - gcc-c++
+      - java-1.8.0-openjdk
+      - java-1.8.0-openjdk-devel
+      - ruby
+      - rubygems
+      - ruby-devel
+      - redhat-rpm-config
+      - asciidoc
+      - asciidoctor
+
+    - name: Install AsciiBinder
+      shell: gem install ascii_binder
