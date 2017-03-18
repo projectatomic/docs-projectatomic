@@ -24,8 +24,8 @@ to how to compose, manage and deploy {product-title} and its various application
 ....
 $ sudo dnf install ansible
 $ git clone https://github.com/projectatomic/atomic-host-docs.git
-$ git checkout -b <branch-name>
 $ cd atomic-host-docs
+$ git checkout -b <branch-name>
 $ ansible-playbook setup.yml --ask-sudo-pass
 ....
 
