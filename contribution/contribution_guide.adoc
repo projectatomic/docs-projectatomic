@@ -36,10 +36,10 @@ $ ansible-playbook setup.yml --ask-sudo-pass
 link:http://asciidoctor.org/docs/asciidoc-syntax-quick-reference[Reference] for AsciiDoc Syntax.
 
 ....
-$ mkdir atomic-host-guide/container && touch atomic-host-guide/container/overview.adoc
+$ mkdir container && touch container/overview.adoc
 ....
 
-.atomic-host-guide/container/overview.adoc
+.container/overview.adoc
 ----
 [[container-overview]]
 = Container Overview
@@ -61,13 +61,10 @@ This file tells AsciiBinder which *_topic_* groups and *_topics_* to generate.
 ----
 ---
 Name: Tools
-Dir: atomic-host-guide
+Dir: container
 Topics:
-  - Name: Containers
-    Dir: container
-    Topics:
-    - Name: Overview
-      File: overview
+  - Name: Overview
+    File: overview
 ----
 
 Now go to the root directory of the repo. The following command will build the Documentation.

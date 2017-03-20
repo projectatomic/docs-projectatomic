@@ -29,7 +29,7 @@ Topics:
 
 ---
 Name: Tools
-Dir: atomic-host-guide
+Dir: tools
 Topics:
   - Name: Cockpit
     Dir: cockpit
@@ -43,7 +43,7 @@ Topics:
 
 ---
 Name: Contribute Guide
-Dir: atomic-host-guide
+Dir: contribution
 Topics:
   - Name: How Can I Contribute
     File: contribution_guide
