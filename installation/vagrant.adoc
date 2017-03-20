@@ -1,0 +1,45 @@
+[[installation-vagrant]]
+= {product-title} Vagrant Installation
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+{product-title} is available as a VirtualBox or libvirt-formatted Vagrant box.
+Fedora/CentOS Atomic link:https://www.vagrantup.com[Vagrant] Box Images can be downloaded from 
+link:https://getfedora.org/en/atomic/download/[Fedora-Atomic] and 
+link:https://wiki.centos.org/SpecialInterestGroup/Atomic/Download[CentOS-Atomic] respectively.
+
+=== Installation with Vagrant Box Image:
+
+==== Add Box to Vagrant
+....
+$ vagrant box add --name atomic-box custom_box.box
+....
+
+==== Initialize Vagrant
+The following command initializes Vagrant and creates a Vagrantfile.
+....
+$ vagrant init atomic-box
+....
+
+==== Configure the Vagrant VM
+....
+$ vagrant up --provider libvirt     # virtualbox can also be used instead of libvirt
+....
+
+==== SSH to the VM
+....
+$ vagrant ssh
+....
+
+The above procedure can be followed, if you want to have customized vagrant box.
+
+
+=== The Easiest way
+The easiest way to consume these images is via the link:Atlas[https://atlas.hashicorp.com].
+Getting the VirtualBox/libvirt instace up involves issuing couple of commands only.
+....
+$ vagrant init {fedora/25-atomic-host/centos/atomic-host} && vagrant up --provider libvirt
+$ vagrant ssh
+....
