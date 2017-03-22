@@ -24,8 +24,15 @@
 Name: About
 Dir: welcome
 Topics:
-- Name: Welcome
-  File: index
+  - Name: Welcome
+    File: index
+
+---
+Name: Installation
+Dir: installation
+Topics:
+  - Name: Vagrant
+    File: vagrant
 
 ---
 Name: Tools
