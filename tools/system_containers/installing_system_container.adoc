@@ -1,0 +1,35 @@
+System images are installed with `atomic install --system` as:
+
+....
+# atomic install --system gscrivano/etcd
+Extracting to /var/lib/containers/atomic/etcd.0
+systemctl daemon-reload
+systemd-tmpfiles --create /etc/tmpfiles.d/etcd.conf
+systemctl enable etcd
+
+# atomic install --system gscrivano/flannel
+Extracting to /var/lib/containers/atomic/flannel.0
+systemctl daemon-reload
+systemd-tmpfiles --create /etc/tmpfiles.d/flannel.conf
+systemctl enable flannel
+
+# systemctl start etcd
+# runc exec etcd etcdctl set /atomic.io/network/config '{"Network":"10.40.0.0/16"}'
+# systemctl start flannel
+....
+
+The template mechanism allows us to configure settings for images. For example, we could
+use the following command to configure Flannel to use another Etcd endpoint instead of
+the default `http://127.0.0.1:2379`
+
+....
+# atomic install --system --set ETCD_ENDPOINTS=http://192.168.122.2:2379 gscrivano/flannel
+....
+
+The `atomic containers` verb is used to see containers:
+
+....
+# atomic containers list -a
+   CONTAINER ID IMAGE                COMMAND              CREATED          STATUS    RUNTIME
+   etcd         gscrivano/etcd       /usr/bin/etcd-env.sh 2016-09-08 14:19 running   runc
+....

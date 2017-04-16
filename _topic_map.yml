@@ -47,6 +47,19 @@ Topics:
       File: installing_cockpit
     - Name: How to Use
       File: using_cockpit
+  - Name: System Containers
+    Dir: system_containers
+    Topics:
+    - Name: Overview
+      File: overview.adoc
+    - Name: Pull the Image
+      File: pull_system_container.adoc
+    - Name: Installation
+      File: installing_system_container.adoc
+    - Name: Structure of System Image
+      File: structure.adoc
+    - Name: Uninstallation
+      File: uninstalling_system_container.adoc
 
 ---
 Name: Contribute Guide
