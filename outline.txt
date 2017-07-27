@@ -1,42 +1,79 @@
 * Introduction
+  * Goals of Atomic Host
+  * How Atomic Host revolutionizes OSes
+  * From RPMs to Layers
 * Installation
-	* Vagrant
-	* Public Cloud
-	* Bare Metal
- 	* Others
+  * Vagrant
+  * Public Cloud
+    * AWS
+    * Digital Ocean
+  * Bare Metal
+     * Cover storage scenarios (devicemapper/overlay)
+  * Others
 * Quick Start
   * Developer Mode
-	* Links to simplest setups, below
+  * Links to simplest setups, below
 * Cluster Setup
   * Vagrant
     * Single-Node Vagrant Example (QS)
-    * multi-node vagrant demo
-	* AH + Kubernetes
-		* Kubeadm (QS)
-		* Kubernetes-Ansible (production)
-	* OpenShift
-		* oc cluster up (QS)
-		* Openshift-Ansible (production)
-	* Other Platforms
-		* Swarm?
-		* Mesos?
+    * multi-node vagrant demo (mulit-node vagrant setups seem low priority to me) 
+  * OpenShift Origin
+    * oc cluster up (QS)
+    * Openshift-Ansible (production)
+  * AH + Kubernetes
+    * Kubeadm (QS)
+    * Kubernetes-Ansible (production)
+  * Other Platforms
+    * Swarm? - maybe... low priority ? 
+    * Mesos? - lower priority
 * Using Ostree
-	* Updates
-	* Rebasing
-	* Hotfixes & Testing
-	* Overlays
+  * Updates
+  * Rebasing
+  * Hotfixes & Testing
+  * Overlays (also covering livefs and override) 
+  * ROLLBACK!!!!
+  * Browsing ostree history
+  * Documenting what repos/refs we are currently using
   * Creating your own ostrees
-  * Distributing ostrees with Pulp
+    * Distributing ostrees with Pulp
 * Administration
   * A Day In The Life of An Atomic SysAdmin
-  * Deciding how to install software
-  * Cockpit & Atomic
+    * rpm-ostree upgrade && reboot ?
+    * checking for updates (rpm-ostree upgrade --preview)
+    * adding storage to root partition (extending root)
+  * Deciding how to install software --> Installing Software
+    * system containers
+    * containers
+    * ostree compose  (create your own ostree)
+    * ostree mutations
+        * package layering 
+        * overrides
+        * livefs
+  * Cockpit & Atomic Host
+    * gui administration (administering Atomic Host with Cockpit)
+    * installation/activation
+    * using cockpit to manage many servers
+  * Configuration Management
+    * Ansible modules
+    * Chef?  Puppet?
 * Atomic Tools
-	* Atomic CLI (link, maybe)
-	* Docker
-  * Kubernetes
-	* System Containers
-	* Other stuff?
+  * Atomic CLI
+    * atomic install software
+    * image signing
+    * trusting registries
+    * atomic host commands
+  * Container runtimes
+    * Docker
+    * CRI-O
+ * Miscellaneous
+   * Skopeo
+  * Other stuff?
 * Cookbook
   * examples of doing specific tasks with Atomic
     mostly from the blog
+  * need list here
+* Reference
+  * rpm-ostree command reference
+  * Atomic CLI command reference (external link instead?)
+  * SELinux & Containers
+    * mostly a troubleshooting guide
