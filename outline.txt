@@ -1,42 +1,123 @@
+This is the "final" version of the outline from the 2017-07-28 VFAD.
+Please do not modify this outline without prior discussion on
+atomic-devel@projectatomic.io, as there are multiple teams using it to coordinate.
+
+Leaf nodes of this tree, down to the third level, will be individual documents in the
+final documentation.  Below the third level, they will be subheadings on a page.
+Issues related to a specific page should reference this structure.  Omit annotations
+like (QS).
+
+Example Issue names:
+
+Installation/Vagrant
+
+Installation/Bare Metal/Managing Storage
+
+Administration/Installing Software/OSTree Mutations
+
+(the three items below the above are on the same page)
+
+## Master Outline
+
 * Introduction
+  * Goals of the Atomic Host project
+  * How Atomic Host Revolutionizes OSes
+  * From RPMs to Layers
 * Installation
-	* Vagrant
-	* Public Cloud
-	* Bare Metal
- 	* Others
+  * Vagrant
+  * Public Cloud
+		* Using cloud-init
+    * AWS
+    * Digital Ocean
+  * Bare Metal
+     * Interactive Install
+     * Automated Install with Kickstarts
+     * Managing Storage
+  * OpenStack
+     * Magnum
+  * Others
 * Quick Start
   * Developer Mode
-	* Links to simplest setups, below
+  * Container Cluster Quickstarts
+	  (links to QS items below)
 * Cluster Setup
   * Vagrant
     * Single-Node Vagrant Example (QS)
-    * multi-node vagrant demo
-	* AH + Kubernetes
-		* Kubeadm (QS)
-		* Kubernetes-Ansible (production)
-	* OpenShift
-		* oc cluster up (QS)
-		* Openshift-Ansible (production)
-	* Other Platforms
-		* Swarm?
-		* Mesos?
+    * Multi-Node Vagrant Demo
+  * OpenShift Origin
+    * oc cluster up (QS)
+    * Openshift-Ansible
+  * Kubernetes
+    * Kubeadm (QS)
+    * Kubernetes-Ansible
+  * Other Platforms
+    * Swarm
+    * Mesos
 * Using Ostree
-	* Updates
-	* Rebasing
-	* Hotfixes & Testing
-	* Overlays
-  * Creating your own ostrees
-  * Distributing ostrees with Pulp
+  * Examining Your System
+	  * Checking Current Ref
+	  * Browsing History
+  * Updates
+  * Rebasing
+	* OSTree Mutations
+			* Package Layering
+			* Overrides
+			* Livefs
+	* Rolling Back
+  * Creating Your Own Distributions
+	  * OStree Compose
+    * Simple OSTree Server
+    * Automated Commit Building
+    * Distributing OStrees with Pulp
 * Administration
   * A Day In The Life of An Atomic SysAdmin
-  * Deciding how to install software
-  * Cockpit & Atomic
+    * Checking System Status in Cockpit
+		* Check Upgrades
+    * Pushing Upgrades to Servers
+    * Rolling Back Servers with Issues
+    * Testing Software with Override
+    * Adding Storage
+		* Installing System Containers
+    * Deploy New Cluster Nodes
+  * Installing Software
+	  * Containers
+		  * Using Skopeo
+    * System Containers
+    * Build Your Own Tree
+		  (links to ostree section)
+		* Local OSTree Changes
+		  (links to ostree section)
+  * Cockpit
+	  * Installation
+    * Administration with Cockpit
+		  * OStree
+			* Containers
+			* Monitoring
+			* Other Tasks
+    * Managing Multiple Servers
+  * Configuration Management
+    * Ansible
+    * Puppet
+		* Others
 * Atomic Tools
-	* Atomic CLI (link, maybe)
-	* Docker
-  * Kubernetes
-	* System Containers
-	* Other stuff?
+  * Atomic CLI
+    * atomic install
+		* atomic host Commands
+		* Image Signing and Trusting Registries
+    * Other Commands
+  * Container Tools
+    * Docker
+    * CRI-O
+    * Registry (openshift all-in-one)
+    * Skopeo
+    * Buildah
+		  (just mention and link off)
 * Cookbook
-  * examples of doing specific tasks with Atomic
-    mostly from the blog
+  (examples of doing specific tasks with Atomic)
+  * Setting up Your Own Hosted OSTreee Server
+  * Caching Images Using a Private Registry
+* Reference
+  * SELinux and Containers
+	  (troubleshooting guide)
+  * RPM-OSTree Command Reference
+  * Atomic CLI Command Reference (external link)
