@@ -114,8 +114,9 @@ Administration/Installing Software/OSTree Mutations
 		  (just mention and link off)
 * Cookbook
   (examples of doing specific tasks with Atomic)
-  * Setting up Your Own Hosted OSTreee Server
+  * Setting up Your Own Hosted OSTree Server
   * Caching Images Using a Private Registry
+	* Upgrade from Fedora 25 Atomic to Fedora 26 Atomic
 * Reference
   * SELinux and Containers
 	  (troubleshooting guide)
