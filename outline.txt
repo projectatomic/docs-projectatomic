@@ -26,7 +26,7 @@ Administration/Installing Software/OSTree Mutations
 * Installation
   * Vagrant
   * Public Cloud
-		* Using cloud-init
+    * Using cloud-init
     * AWS
     * Digital Ocean
   * Bare Metal
@@ -39,7 +39,7 @@ Administration/Installing Software/OSTree Mutations
 * Quick Start
   * Developer Mode
   * Container Cluster Quickstarts
-	  (links to QS items below)
+    (links to QS items below)
 * Cluster Setup
   * Vagrant
     * Single-Node Vagrant Example (QS)
@@ -55,70 +55,69 @@ Administration/Installing Software/OSTree Mutations
     * Mesos
 * Using Ostree
   * Examining Your System
-	  * Checking Current Ref
-	  * Browsing History
+    * Checking Current Ref
+    * Browsing History
   * Updates
   * Rebasing
-	* OSTree Mutations
-			* Package Layering
-			* Overrides
-			* Livefs
-	* Rolling Back
+    * OSTree Mutations
+    * Package Layering
+    * Overrides
+    * Livefs
+    * Rolling Back
   * Creating Your Own Distributions
-	  * OStree Compose
+    * OStree Compose
     * Simple OSTree Server
     * Automated Commit Building
     * Distributing OStrees with Pulp
 * Administration
   * A Day In The Life of An Atomic SysAdmin
     * Checking System Status in Cockpit
-		* Check Upgrades
+    * Check Upgrades
     * Pushing Upgrades to Servers
     * Rolling Back Servers with Issues
     * Testing Software with Override
     * Adding Storage
-		* Installing System Containers
+    * Installing System Containers
     * Deploy New Cluster Nodes
   * Installing Software
-	  * Containers
-		  * Using Skopeo
+    * Containers
+      * Using Skopeo
     * System Containers
     * Build Your Own Tree
-		  (links to ostree section)
-		* Local OSTree Changes
-		  (links to ostree section)
+      (links to ostree section)
+    * Local OSTree Changes
+      (links to ostree section)
   * Cockpit
-	  * Installation
+    * Installation
     * Administration with Cockpit
-		  * OStree
-			* Containers
-			* Monitoring
-			* Other Tasks
+      * OStree
+      * Containers
+      * Monitoring
+      * Other Tasks
     * Managing Multiple Servers
   * Configuration Management
     * Ansible
     * Puppet
-		* Others
+    * Others
 * Atomic Tools
   * Atomic CLI
     * atomic install
-		* atomic host Commands
-		* Image Signing and Trusting Registries
+    * atomic host Commands
+    * Image Signing and Trusting Registries
     * Other Commands
   * Container Tools
     * Docker
     * CRI-O
     * Registry (openshift all-in-one)
     * Skopeo
-    * Buildah
-		  (just mention and link off)
+    * Buildah (just mention and link off)
 * Cookbook
   (examples of doing specific tasks with Atomic)
   * Setting up Your Own Hosted OSTree Server
   * Caching Images Using a Private Registry
-	* Upgrade from Fedora 25 Atomic to Fedora 26 Atomic
+  * Upgrade from Fedora 25 Atomic to Fedora 26 Atomic
 * Reference
   * SELinux and Containers
-	  (troubleshooting guide)
+    (troubleshooting guide)
   * RPM-OSTree Command Reference
   * Atomic CLI Command Reference (external link)
