@@ -1,0 +1,348 @@
+This etherpad:
+
+http://etherpad.osuosl.org/fedora_atomic_docs_vfad
+
+Discussion happening now in irc.freenode.net #atomic
+
+Schedule:
+
+13:30 UTC - 30 minute bluejeans session
+   https://bluejeans.com/u/dmabe
+14:00 UTC to 17:00 UTC - IRC collaboration
+   irc.freenode.net, channel #atomic
+17:00 UTC to 17:30 UTC - short recap bluejeans session (planning for FLOCK)
+   https://bluejeans.com/u/dmabe
+
+Introduction:
+
+* Goals of new doc project
+* New documentation infrastructure for Atomic Host Docs
+
+Resources:
+
+* https://github.com/projectatomic/atomic-host-docs
+
+https://github.com/projectatomic/atomic-host-docs/tree/master/attic/atomic-guide  Josh Berkus
+* https://github.com/projectatomic/atomic-site
+* docs Trishna jbrooks
+* blog - dustymabe drakonis
+
+* https://github.com/projectatomic/rpm-ostree/tree/master/docs Trishna Guha
+
+* https://github.com/projectatomic/atomic/tree/master/docs  Sayan
+
+* http://fedoracloud.readthedocs.io/en/latest/ (source: https://github.com/fedora-cloud/fedoracloud) Drakonis
+* https://github.com/projectatomic/skopeo/blob/master/docs/skopeo.1.md
+* https://access.redhat.com/documentation/en/red-hat-enterprise-linux-atomic-host/ jbrooks
+* Fedora Wiki
+* https://fedoraproject.org/wiki/Atomic_WG
+* https://fedoraproject.org/wiki/Category:Cloud_SIG
+* Personal Blogs
+* Kushal's blog  https://kushaldas.in/categories/atomic.html
+* jbrooks' blog  https://jebpages.com/?s=atomic
+* Mrunal's blog
+* Colin's blog https://blog.verbum.org/
+* RHEL Blog etc. http://rhelblog.redhat.com/ Jberkus
+* Dusty's blog: http://dustymabe.com/category/atomic/
+
+Need to get source for RHEL Cockpit Guide
+
+Part I: Coverage and Topics
+
+Proposed Documentation Outline for Administrator Guide
+
+From https://github.com/projectatomic/atomic-host-docs/blob/master/outline.txt
+
+
+Understanding Fedora's Releases
+- https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-02-10-matching-fedora-ostree-released-content-with-each-2week-atomic-release.html.md
+Understanding CentOS' Releases
+
+* Introduction (dusty - create issues from here to Quickstart)
+* Goals of Atomic Host
+* How Atomic Host revolutionizes OSes
+ - https://github.com/projectatomic/atomic-site/blob/master/source/docs/atomic-host-networking.md
+ - https://github.com/projectatomic/atomic-site/blob/master/source/docs/introduction.md
+ - https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html-single/overview_of_containers_in_red_hat_systems/
+* From RPMs to Layers
+- https://github.com/projectatomic/rpm-ostree/blob/master/docs/manual/background.md
+* Installation
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html-single/installation_and_configuration_guide/
+- https://github.com/projectatomic/atomic/blob/master/docs/install/Fedora.md
+- https://github.com/projectatomic/atomic/blob/master/docs/atomic-install.1.md
+* Vagrant
+   - https://github.com/projectatomic/atomic-site/blob/master/source/docs/quickstart.md (dated)
+   - http://fedoracloud.readthedocs.io/en/latest/vagrant.html
+   - https://github.com/projectatomic/atomic-host-docs/blob/master/attic/atomic-guide/installation_and_configuration_guide/content/virtual_machine_installations.adoc
+   - https://github.com/projectatomic/atomic-host-docs/blob/master/installation/vagrant.adoc
+* Public Cloud
+* AWS
+* Digital Ocean
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-04-27-fedora-atomic-digitalocean.md
+* using cloud-init
+  - https://github.com/projectatomic/atomic-host-docs/blob/master/attic/atomic-guide/installation_and_configuration_guide/content/cloud-init-faq.adoc
+* Bare Metal
+      - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-06-07-micro-cluster-part-1.html.md
+ * interactive install
+     - https://github.com/projectatomic/atomic-site/blob/master/source/docs/fedora_atomic_bare_metal_installation.md
+ * kickstarts
+   - https://github.com/projectatomic/atomic-host-docs/blob/master/attic/atomic-guide/installation_and_configuration_guide/content/kickstart_installation.adoc
+   - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-07-17-fedora-atomic-26-kickstarts.md
+   - PXE boot: https://github.com/projectatomic/atomic-host-docs/blob/master/attic/atomic-guide/installation_and_configuration_guide/content/pxe_installation.adoc
+   - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-10-12-install-with-kickstart.html.md
+ * Cover storage scenarios (devicemapper/overlayfs)
+     - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-05-15-single-overlayfs-volume.html.md (released during f25AH time frame)
+     - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-05-08-migrate-fedora-atomic-host-to-overlay2.md
+* OpenStack
+ * Magnum
+   - http://superuser.openstack.org/articles/a-primer-on-magnum-openstack-containers-as-a-service/
+   - https://wiki.openstack.org/wiki/Magnum
+* Others
+- https://github.com/projectatomic/atomic-site/blob/master/source/docs/quickstart.md
+* Quick Start (drakonis to create issues from here to Using Ostree)
+* Developer Mode
+- https://github.com/projectatomic/atomic-host-docs/blob/master/attic/atomic-guide/installation_and_configuration_guide/content/developer_mode.adoc
+* Links to simplest setups, below
+* Cluster Setup
+
+https://github.com/projectatomic/atomic-site/blob/master/source/blog/2015-09-21-clustering-atomic-hosts-with-kubernetes-ansible-and-vagrant.html.md
+
+* Vagrant
+* Single-Node Vagrant Example (QS)
+   - http://fedoracloud.readthedocs.io/en/latest/atomic.html#setting-up-fedora-atomic-cluster-with-kubernetes-and-vagrant
+* multi-node vagrant demo (mulit-node vagrant setups seem low priority to me) (it's trivial w/ ansible contrib)
+  - http://www.projectatomic.io/blog/2015/09/clustering-atomic-hosts-with-kubernetes-ansible-and-vagrant/
+  - https://github.com/kubernetes/contrib/blob/master/ansible/vagrant/README.md
+* OpenShift Origin
+* oc cluster up (QS)
+ - https://github.com/openshift/origin/blob/master/docs/cluster_up_down.md
+* Openshift-Ansible (production)
+     - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-12-07-part1-install-origin-on-f25-atomic-host.html.md
+     - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-12-12-part2-install-origin-on-f25-atomic-host.html.md
+* AH + Kubernetes
+
+ - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2014-11-25-testing-kubernetes-with-an-atomic-host.html.md (dated)
+
+- https://github.com/projectatomic/atomic-site/blob/master/source/docs/gettingstarted.md
+
+- https://github.com/projectatomic/atomic-site/blob/master/source/docs/kubernetes.md
+
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/getting_started_with_kubernetes/
+
+* Kubeadm (QS)
+ - https://github.com/projectatomic/atomic-site/pull/450
+* Kubernetes-Ansible (production)
+- https://github.com/kubernetes/contrib/blob/master/ansible/README.md
+* Other Platforms
+* Swarm? - maybe... low priority ?
+- http://www.projectatomic.io/blog/2016/10/new-centos-atomic-host-with-optional-docker-1-12/ (more or less just worked)
+* Mesos? - lower priority
+* Using Ostree (XXXXX - to create issues from Using Ostree to the Docker Section)
+* Updates
+  - https://fedoraproject.org/wiki/Atomic_Host_upgrade - up to date
+  - https://github.com/projectatomic/atomic-host-docs/blob/master/attic/atomic-guide/installation_and_configuration_guide/content/upgrading_and_downgrading.adoc
+  - https://github.com/projectatomic/atomic-site/blob/master/source/docs/os-updates.md
+* Rebasing
+* Hotfixes & Testing
+  https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-07-12-hacking-and-extending-atomic-host.html.md
+* OSTree Overlays (also covering livefs and override) - there is another section that has livefs and overrides in it -look under "ostree mutations"
+* ROLLBACK!!!!
+* Browsing ostree history
+  - post on dustymabe.com about this - will find link
+* Documenting what repos/refs we are currently using
+* Creating your own ostrees
+   -  https://github.com/projectatomic/atomic-site/blob/master/source/blog/2014-04-16-build-your-own-atomic-host-on-fedora-20.html.md
+   - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-02-27-automate-building-atomic-host.html.md
+   - https://github.com/trishnaguha/build-atomic-host
+   - http://firstyear.id.au/blog/html/2017/05/22/custom_ostree_images.html
+* setting up a simple server
+* automated commit building
+* Distributing ostrees with Pulp
+  - https://docs.pulpproject.org/plugins/pulp_ostree/user-guide/installation.html
+  - https://www.youtube.com/watch?v=-5iBG_WiI-M
+  - https://github.com/mhrivnak/pulp-k8s
+* Administration
+* A Day In The Life of An Atomic SysAdmin
+* checking system status on Cockpit
+* rpm-ostree upgrade && reboot ?
+  - https://github.com/projectatomic/atomic-host-docs/blob/master/attic/atomic-guide/installation_and_configuration_guide/content/upgrading_and_downgrading.adoc
+* something is wrong after upgrade, rolling back
+* installing software temporarily to debug issues - then cleaning your system back to previous state
+* checking for updates (rpm-ostree upgrade --preview)
+* adding storage to root partition (extending root)
+* deploy new nodes in a cluster (link to cluster docs)
+* Installing Software
+* system containers
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-06-08-creating-system-containers.html.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-05-30-testing-system-containerized-kubeadm.html.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-05-09-system-containerized-kube.html.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-09-12-intro-to-system-containers.md
+    - https://github.com/projectatomic/atomic-host-docs/tree/master/tools/system_containers
+    - http://rhelblog.redhat.com/2017/07/19/containing-system-services-in-red-hat-enterprise-linux-part-1/
+* containers (and skopeo)
+* ostree compose  (create your own ostree)
+  - https://github.com/projectatomic/atomic-host-docs/blob/master/attic/atomic-guide/installation_and_configuration_guide/content/upgrading_and_downgrading.adoc
+  - https://github.com/projectatomic/rpm-ostree/blob/master/docs/manual/compose-server.md
+  - https://github.com/projectatomic/atomic-site/blob/master/source/docs/compose-your-own-tree.md
+  - https://github.com/projectatomic/rpm-ostree/blob/master/docs/manual/treefile.md
+* ostree mutations
+    * package layering
+      - https://github.com/projectatomic/atomic-host-docs/blob/master/attic/atomic-guide/installation_and_configuration_guide/content/adding_software.adoc
+      - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-06-05-rpm-ostree-v2017.6-released.html.md
+      - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-08-30-new-centos-atomic-host-with-package-layering-support.html.md (dated - pkg-add -> install)
+      - https://github.com/projectatomic/rpm-ostree/blob/master/docs/manual/administrator-handbook.md
+      - https://github.com/projectatomic/rpm-ostree/blob/master/docs/manual/background.md
+    * overrides
+        - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-07-25-rpm-ostree-v2017.7-released.html.md
+    * livefs
+        - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-06-05-rpm-ostree-v2017.6-released.html.md
+* Cockpit & Atomic Host
+ - https://github.com/projectatomic/atomic-site/blob/master/source/docs/cockpit.md
+ - https://github.com/projectatomic/atomic-host-docs/tree/master/tools/cockpit
+ - https://fedoramagazine.org/deploy-containers-atomic-host-ansible-cockpit/
+ - https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html-single/getting_started_with_cockpit/ (need source)
+* gui administration (administering Atomic Host with Cockpit)
+ -  Cockpit & Container storage https://www.youtube.com/watch?v=0b-pkNgfxJ8
+ - OStree updates: https://www.youtube.com/watch?v=0b-pkNgfxJ8
+* installation/activation
+* using cockpit to manage many servers
+* Configuration Management
+* Ansible modules
+    - deploying container to atomic host using ansible: https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-10-27-deployment-using-ansible.html.md
+    - http://docs.ansible.com/ansible/latest/atomic_host_module.html
+    - https://github.com/trishnaguha/build-atomic-host
+* Puppet
+   - running puppet on atomic host: https://ttboj.wordpress.com/2015/06/12/a-super-privileged-puppet-container/
+* Atomic Tools
+* Atomic CLI
+    -  http://fedoracloud.readthedocs.io/en/latest/atomiccommandcheatsheet.html
+    - https://github.com/projectatomic/atomic-host-docs/blob/master/attic/atomic-guide/installation_and_configuration_guide/content/atomic_host.adoc
+    - https://github.com/projectatomic/rpm-ostree/blob/master/docs/manual/administrator-handbook.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-05-13-using-the-atomic-cli-to-scan-vms.html.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/docs/usr-bin-atomic.md
+    - http://rhelblog.redhat.com/2015/09/23/recent-updates-to-the-atomic-cli/
+    - https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html-single/cli_reference/
+* atomic install software
+- https://github.com/projectatomic/atomic/blob/master/docs/install/Fedora.md
+* image signing &trusting registries
+  - http://rhelblog.redhat.com/2016/07/22/container-image-signing/
+* atomic host commands
+- https://github.com/projectatomic/atomic/tree/master/docs
+* Container Tools
+* Docker (jbrooks to create issues from Docker and everything below this line)
+    - what patches do we maintain on top of docker: https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-08-18-docker-patches.html.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/docs/docker_patches.md
+    - docker and SELinux: https://github.com/projectatomic/atomic-host-docs/blob/master/attic/atomic-guide/container_security_guide/content/docker_selinux_security_policy.adoc
+
+      http://fedoracloud.readthedocs.io/en/latest/docker.html (dated addendum to above)
+
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-01-09-remote-access-docker-daemon.html.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-10-24-playing-with-docker-logging.html.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-07-11-docker-selinux-flag.html.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/docs/docker-and-selinux.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/docs/docker-storage-recommendation.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/docs/filesystems.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/docs/man_pages.md
+    - https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html-single/getting_started_with_containers/ (outdated)
+    - https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html-single/managing_containers/ (outdated)
+* CRI-O
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-06-09-using-kubeadm-with-cri-o.html.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-06-06-6-reasons-why-cri-o-is-the-best-runtime-for-kubernetes.html.md
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-02-08-crio-runtimes.html.md (maybe dated now)
+* registry solution (openshift all-in-one)
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-05-25-oo-standalone-registry.md
+* Skopeo
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-03-01-skopeo-inspect-remote-images.html.md
+    - https://github.com/projectatomic/skopeo/blob/master/docs/skopeo.1.md
+    - http://rhelblog.redhat.com/2017/05/11/skopeo-copy-to-the-rescue/
+* Buildah (just mention and link off)
+    - https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-06-22-introducing-buildah.html.md
+* Cookbook
+
+* examples of doing specific tasks with Atomic
+mostly from the blog
+
+https://github.com/projectatomic/atomic-site/blob/master/source/blog/2014-10-15-containerized-directory-services-with-docker-and-freeipa.html.md
+
+https://github.com/projectatomic/atomic-site/blob/master/source/blog/2015-12-08-fedora-atomic-sssd-container.html.md
+
+https://github.com/projectatomic/atomic-site/blob/master/source/blog/2015-10-05-setting-up-skydns.html.md
+
+* setting up your own ostree host server (automated ostree commit building, served content)
+- https://github.com/projectatomic/rpm-ostree/blob/master/docs/manual/compose-server.md (reference for above)
+* caching images using a private registry
+* managing upstream registries (FLIBS, CentOS, private, etc.)
+* Reference
+* rpm-ostree command reference
+- https://github.com/projectatomic/rpm-ostree/blob/master/docs/manual/administrator-handbook.md
+* Atomic CLI command reference (external link instead?)
+- https://github.com/projectatomic/atomic-host-docs/tree/master/attic/atomic-guide/atomic_cli/content (has some content the official CLI docs don't have)
+* SELinux & Containers
+* mostly a troubleshooting guide
+- https://github.com/projectatomic/atomic-site/blob/master/source/blog/2016-03-04-dwalsh_selinux_containers.md
+
+DEVELOPER GUIDE LINKS
+- https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-05-03-minishift-intro.html.md
+- https://github.com/projectatomic/atomic-site/blob/master/source/docs/docker-building-images.md
+-  https://github.com/projectatomic/atomic-site/blob/master/source/docs/docker-image-author-guidance.md
+- https://github.com/projectatomic/atomic-site/blob/master/source/docs/docker-image-orig.md
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html-single/recommended_practices_for_container_development/
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html-single/container_security_guide/
+
+DEPRECATED / DITCH
+
+-  https://github.com/projectatomic/atomic-site/blob/master/source/docs/atomicapp.md
+- https://github.com/projectatomic/atomic-site/blob/master/source/docs/geard.md
+- https://github.com/projectatomic/atomic-site/blob/master/source/docs/nulecule.md
+
+* How to contribute to docs
+- https://github.com/projectatomic/atomic-host-docs/blob/master/contribution/contribution_guide.adoc
+- https://github.com/projectatomic/atomic-site/blob/master/source/blog/2017-04-10-contribute-to-atomic-host-doc.html.md
+* Links to community pages
+
+
+Questions to Answer
+
+* what's missing?
+* what's not necessary?
+* what's highest priority?
+* Where should we restructure?
+* add extra detail for some items
+* Should Cockpit GUI be its own section, or covered alongside CLI options throughout the docs?
+
+Part II: mapping existing docs/blogs
+
+* Map existing doc pages on pa.io, Fedora Wiki pages, and blog posts to topics identified in the TOC.
+
+* Map documentation from other projects (rpm-ostree, Atomic CLI, etc.) to our docs.
+
+* Map documentation from Red Hat Atomic to our desired topics.
+
+https://github.com/projectatomic/atomic-host-docs/tree/master/attic/atomic-guide
+
+Question: should external project docs be linked or copied in?  May vary by project.
+
+Part III: Identify and Prepare Work Items
+
+* describe each missing doc (goals, required content, existing resources to write it)
+* create specific work items for each so that we can work on them during the FLOCK workshop
+* group docs to be ported into logical work groups so that community can take on porting.
+
+
+Action Items:
+
+jberkus: by EOD-USA Monday will update outline, create example of converting outline to issue title and doc name
+
+outline will be updated here:https://github.com/projectatomic/atomic-host-docs/blob/master/outline.txt
+
+WAIT UNTIL TUESDAY AND THEN DO:
+
+dusty to creates issues in atomic-host-docs repo for beginning of TOC to Quickstart
+
+drakonis to creates issues in atomic-host-docs repo for Quick Start to Using Ostree section
+
+sayan to create issues in atomic-host docs repo for Using Ostree Section to Docker
+
+jbrooks to create issues in atomic-host-docs repo for Docker section to end of TOC
+
+jberkus + trishnag - create directory structure within the atomic-host docs site
