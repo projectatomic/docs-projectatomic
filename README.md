@@ -10,7 +10,7 @@ The "attic" contains contributed files from other sources such as Red Hat Atomic
 
 ## Contribution Guide
 
-Want to hack on Atomic Host Docs? Check the [Contribution-Guide](https://github.com/projectatomic/atomic-host-docs/blob/master/atomic-host-guide/contribution_guide.adoc).
+Want to hack on Atomic Host Docs? Check the [Contribution-Guide](https://github.com/projectatomic/atomic-host-docs/blob/master/contribution/contribution_guide.adoc).
 
 ## Copyright and Contributors
 
