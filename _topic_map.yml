@@ -35,6 +35,13 @@ Topics:
     File: vagrant
 
 ---
+Name: Cluster Setup
+Dir: cluster_setup
+Topics:
+  - Name: Vagrant
+    File: vagrant
+
+---
 Name: Tools
 Dir: tools
 Topics:
