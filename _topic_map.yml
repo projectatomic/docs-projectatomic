@@ -51,15 +51,15 @@ Topics:
     Dir: system_containers
     Topics:
     - Name: Overview
-      File: overview.adoc
+      File: overview
     - Name: Pull the Image
-      File: pull_system_container.adoc
+      File: pull_system_container
     - Name: Installation
-      File: installing_system_container.adoc
+      File: installing_system_container
     - Name: Structure of System Image
-      File: structure.adoc
+      File: structure
     - Name: Uninstallation
-      File: uninstalling_system_container.adoc
+      File: uninstalling_system_container
 
 ---
 Name: Contribute Guide
