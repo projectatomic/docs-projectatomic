@@ -149,33 +149,6 @@ spec:
 
 Use `pod.yaml` to create the pod and the claim, then check that it was all done properly.
 
-Add the following content to the `pod.yaml` file:
-
-....
-kind: Pod
-apiVersion: v1
-metadata:
-  name: mypod
-  labels:
-    name: frontendhttp
-spec:
-  containers:
-    - name: myfrontend
-      image: nginx
-      ports:
-        - containerPort: 80
-          name: "http-server"
-      volumeMounts:
-      - mountPath: "/usr/share/nginx/html"
-        name: mypd
-  volumes:
-    - name: mypd
-      persistentVolumeClaim:
-       claimName: myclaim-1
-....
-
-Use `pod.yaml` to create the pod and the claim, then check that it was all done properly.
-
 ....
 $ kubectl create -f ~/examples/persistent-volumes/simpletest/pod.yaml
 
