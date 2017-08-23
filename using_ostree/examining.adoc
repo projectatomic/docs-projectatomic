@@ -21,8 +21,9 @@ fedora-atomic:fedora/26/x86_64/updates/atomic-host
 ....
 
 This shows the host has three refs, `ostree/1/1/0`, `ostree/1/1/1` and
-`fedora-atomic:fedora/26/x86_64/updates/atomic-host`. The refs statring with
-`ostree/` local refs, the ref starting with `fedora-atomic:` is a remote ref.
+`fedora-atomic:fedora/26/x86_64/updates/atomic-host`. The refs starting with
+`ostree/` are local refs, the ref starting with `fedora-atomic:` is a remote
+ref.
 
 To check which ref is currently checked out, run `ostree admin status`:
 
