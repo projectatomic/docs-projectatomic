@@ -1,0 +1,64 @@
+[[using-ostree-examining]]
+= Examining Your System
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+=== Checking Your Current Ref
+
+OSTree "references" (abbreviated "refs") are textfiles that refer to particular
+commits. They are similar to git branches.
+
+The command `ostree refs` lists all refs available on the host. As an example
+of the output of this command:
+
+....
+$ ostree refs
+ostree/1/1/0
+ostree/1/1/1
+fedora-atomic:fedora/26/x86_64/updates/atomic-host
+....
+
+This shows the host has three refs, `ostree/1/1/0`, `ostree/1/1/1` and
+`fedora-atomic:fedora/26/x86_64/updates/atomic-host`. The refs statring with
+`ostree/` local refs, the ref starting with `fedora-atomic:` is a remote ref.
+
+To check which ref is currently checked out, run `ostree admin status`:
+
+....
+$ ostree admin status
+  fedora-atomic 55be41d9a8f5b7d774652aa4a4d407d496b8892d3d51a6585e6ee268940677ad.0 (pending)
+    Version: 26.111
+    origin refspec: fedora-atomic:fedora/26/x86_64/updates/atomic-host
+* fedora-atomic 0715ce81064c30d34ed52ef811a3ad5e5d6a34da980bf35b19312489b32d9b83.0
+    Version: 26.91
+    origin refspec: fedora-atomic:fedora/26/x86_64/updates/atomic-host
+....
+
+The `*` next to the second item in the list tells us this is the current tree.
+To explore this tree:
+
+....
+cd /ostree/deploy/fedora-atomic/deploy/0715ce81064c30d34ed52ef811a3ad5e5d6a34da980bf35b19312489b32d9b83.0/
+$ ls
+bin   dev  home  lib64  mnt  ostree  root  sbin  sys      tmp  var
+boot  etc  lib   media  opt  proc    run   srv   sysroot  usr
+....
+
+=== Browsing History
+
+To look at the history of a ref, use the `ostree log` command. Running the
+command on `fedora-atomic:fedora/26/x86_64/updates/atomic-host`:
+
+....
+$ ostree log fedora-atomic:fedora/26/x86_64/updates/atomic-host
+commit 55be41d9a8f5b7d774652aa4a4d407d496b8892d3d51a6585e6ee268940677ad
+Date:  2017-08-22 20:05:54 +0000
+Version: 26.111
+(no subject)
+
+<< History beyond this commit not fetched >>
+....
+
+This ref has one commit in its history.
