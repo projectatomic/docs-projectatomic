@@ -42,6 +42,13 @@ Topics:
     File: vagrant
 
 ---
+Name: Using OSTree
+Dir: using_ostree
+Topics:
+  - Name: Examining Your System
+    File: examining
+
+---
 Name: Tools
 Dir: tools
 Topics:
