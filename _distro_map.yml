@@ -10,24 +10,24 @@ atomic_host_docs:
       name: Latest
       dir: latest
 
-atomic_host_docs:
-  name: Fedora Atomic Host
-  author: Project Atomic Documentation Project <atomic@projectatomic.io>
-  site: main
-  site_name: Fedora Atomic Host Documentation
-  site_url: http://docs.projectatomic.io/fedora_atomic/
-  branches:
-    fedora:
-      name: latest
-      dir: fedora
+#atomic_host_docs:
+#  name: Fedora Atomic Host
+#  author: Project Atomic Documentation Project <atomic@projectatomic.io>
+#  site: main
+#  site_name: Fedora Atomic Host Documentation
+#  site_url: http://docs.projectatomic.io/fedora_atomic/
+#  branches:
+#    fedora:
+#      name: latest
+#      dir: fedora
 
-atomic_host_docs:
-  name: CentOS Atomic Host
-  author: Project Atomic Documentation Project <atomic@projectatomic.io>
-  site: main
-  site_name: CentOS Atomic Host Documentation
-  site_url: http://docs.projectatomic.io/centos_atomic/
-  branches:
-    centos:
-      name: latest
-      dir: centos
+#atomic_host_docs:
+#  name: CentOS Atomic Host
+#  author: Project Atomic Documentation Project <atomic@projectatomic.io>
+#  site: main
+#  site_name: CentOS Atomic Host Documentation
+#  site_url: http://docs.projectatomic.io/centos_atomic/
+#  branches:
+#    centos:
+#      name: latest
+#      dir: centos
