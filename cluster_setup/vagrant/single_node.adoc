@@ -1,0 +1,122 @@
+[[cluster-setup-vagrant]]
+= Cluster Setup With Vagrant
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+Vagrant is a tool for working with virtual environments, which usually means
+working with virtual machines.
+
+Vagrant can be used to quickly set up and run a single-node or multi-node
+cluster with the help of kubernetes.
+
+
+== Prerequisites
+
+* Ansible - to provision the cluster
+* Git - to clone the kubernetes contrib repository, containing the
+Vagrantfile we need
+* One of the following vagrant providers
+** https://libvirt.org[Libvirt]
+** https://www.virtualbox.org[VirtualBox]
+** https://github.com/ggiamarchi/vagrant-openstack-provider[OpenStack]
+** https://github.com/mitchellh/vagrant-aws[AWS]
+* Vagrant - to run vagrant commands
+
+
+== Single-Node Vagrant Example (QS)
+
+To get up and running with an atomic host cluster, run the following
+commands in your terminal:
+
+....
+git clone https://github.com/kubernetes/contrib.git
+cd contrib/ansible/vagrant
+export OS_IMAGE=fedoraatomic # (alternativly this can be centosatomic)
+export NUM_NODES=1
+vagrant up --no-provision --provider=libvirt # (virtualbox, openstack and aws are other provider options)
+vagrant provision kube-master-1
+....
+
+
+=== Optional providers
+
+If you are not using one or both of the openstack or aws providers and do
+not wish to install them, please comment out the
+`require 'vagrant-openstack-provider'` and/or
+`require 'vagrant-aws'` lines from `contrib/ansible/vagrant/Vagrantfile`.
+
+
+=== Testing it out
+
+Run `vagrant up`.
+
+Once the ansible playbook has finished running, you should have a single
+node cluster.
+
+Login using:
+
+    vagrant ssh kube-master-1
+
+And verify the cluster is up:
+
+....
+[vagrant@kube-master-1 ~]$ kubectl cluster-info
+Kubernetes master is running at http://localhost:8080
+Elasticsearch is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/elasticsearch-logging
+Heapster is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/heapster
+Kibana is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/kibana-logging
+KubeDNS is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/kube-dns
+Grafana is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/monitoring-grafana
+InfluxDB is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/monitoring-influxdb
+
+[vagrant@kube-master-1 ~]$ kubectl get nodes
+NAME          LABELS                               STATUS    AGE
+kube-node-1   kubernetes.io/hostname=kube-node-1   Ready     34m
+....
+
+
+== Multi-Node Vagrant Example
+
+To run an N node multi-node cluster, where N is an integer value,
+`export NUM_NODES=N` before running the vagrant commands. For
+example to create a 4 node cluster:
+
+....
+export NUM_NODES=4
+vagrant up --no-provision --provider=libvirt # (virtualbox, openstack and aws are other provider options)
+vagrant provision kube-master-1
+....
+
+
+=== Testing it out
+
+Run `vagrant up`.
+
+Once the ansible playbook has finished running, you should have
+an N kube-node cluster.
+
+Login using:
+
+    vagrant ssh kube-master-1
+
+And verify the cluster is up:
+
+....
+[vagrant@kube-master-1 ~]$ kubectl cluster-info
+Kubernetes master is running at http://localhost:8080
+Elasticsearch is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/elasticsearch-logging
+Heapster is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/heapster
+Kibana is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/kibana-logging
+KubeDNS is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/kube-dns
+Grafana is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/monitoring-grafana
+InfluxDB is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/monitoring-influxdb
+
+[vagrant@kube-master-1 ~]$ kubectl get nodes
+NAME          LABELS                               STATUS    AGE
+kube-node-1   kubernetes.io/hostname=kube-node-1   Ready     34m
+kube-node-2   kubernetes.io/hostname=kube-node-2   Ready     34m
+kube-node-3   kubernetes.io/hostname=kube-node-3   Ready     34m
+kube-node-4   kubernetes.io/hostname=kube-node-4   Ready     34m
+....
