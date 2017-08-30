@@ -7,19 +7,47 @@
 :imagesdir: {images}
 
 [.lead]
-link:http://www.projectatomic.io[Project Atomic] aims to build a welcoming and diverse community. 
-{product-title} Documentation focuses on convering Docs required for {product-title} introduction 
+link:http://www.projectatomic.io[Project Atomic] aims to build a welcoming and diverse community.
+{product-title} Documentation focuses on convering Docs required for {product-title} introduction
 to how to compose, manage and deploy {product-title} and its various application.
 
+=== Building the Documentation Using a Container
 
-=== Requirements
+The fastest way to get up and running with writing the documentation (at least,
+on a Linux or Unix desktop) is by using the
+link:https://hub.docker.com/projectatomic/ascii_binder[AsciiBinder container].
+
+First, fork the atomic-host-docs repository and `git clone` it.  Second, install
+the docker runtime and CLI if you don't already have it.  Then navigate to
+the root of the repository and run the following docker command:
+
+....
+docker run -it --rm -v `pwd`:/docs:z projectatomic/ascii_binder asciibinder build
+docker run -it --rm -v `pwd`:/docs:z projectatomic/ascii_binder asciibinder watch
+....
+
+This will run AsciiBinder in a container, automatically building a preview of any
+changes you make in the repository.  You can preview your documentation by navigating
+to the _preview subfolder which has appeared in your docs repository, specifically
+to `atomic-host-docs/_preview/atomic_host_docs/latest/welcome/index.html`.
+
+When you are done editing and checking your work, you can exit the container by
+sending `CTRL-d`.  This will leave behind the `_preview` directory; if you want to
+clean that up, you may need to `sudo rm` it because its files may be owned by root.
+
+=== Native Install
+
+You may also install documentation on your local system instead of using the container,
+for a smoother editing and building experience.
+
+==== Requirements
 
 * link:http://asciidoctor.org/docs/what-is-asciidoc/#what-is-asciidoc[AsciiDoc] markup language to write Docs.
 * link:http://asciidoctor.org[Asciidoctor] that acts as text processor to convert AsciiDoc content to HTML5, DocBook and others.
 * link:http://www.asciibinder.org[AsciiBinder] that helps to build, maintain documentation in easier way.
 
 
-=== Set up Development Environment
+==== Set up Development Environment
 
 ....
 $ sudo dnf install ansible
@@ -30,9 +58,9 @@ $ ansible-playbook setup.yml --ask-sudo-pass
 ....
 
 
-=== How to Write Doc
+=== How to Write Docs
 
-{product-title} Documentation uses AsciiDoc markup language. You can have a look at the 
+{product-title} Documentation uses AsciiDoc markup language. You can have a look at the
 link:http://asciidoctor.org/docs/asciidoc-syntax-quick-reference[Reference] for AsciiDoc Syntax.
 
 ....
@@ -48,13 +76,13 @@ $ mkdir container && touch container/overview.adoc
 :data-uri:
 :icons:
 
-Container contains applications in a way to keep itself isolated from the host system that it runs on and 
+Container contains applications in a way to keep itself isolated from the host system that it runs on and
 container allows developer to package an application with all of it parts, such as libraries and other packages
 it needs to run and ship it all as one package.
 I love Containers!!!
 ----
 
-After the Doc is ready, we need to make entry in `_topic_map.yml` file. 
+After the Doc is ready, we need to make entry in `_topic_map.yml` file.
 This file tells AsciiBinder which *_topic_* groups and *_topics_* to generate.
 
 ._topic_map.yml
@@ -82,5 +110,5 @@ This is how it will look like after the Doc is build:
 image::contribution-guide-demo.png[alt="Sunset", width="900", height="500"]
 === Join the Community
 
-If you are interested joining the Project Atomic community, please refer to 
+If you are interested joining the Project Atomic community, please refer to
 link:http://www.projectatomic.io/community[Project-Atomic-Community].
