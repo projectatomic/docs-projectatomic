@@ -15,7 +15,7 @@ to how to compose, manage and deploy {product-title} and its various application
 
 The fastest way to get up and running with writing the documentation (at least,
 on a Linux or Unix desktop) is by using the
-link:https://hub.docker.com/projectatomic/ascii_binder[AsciiBinder container].
+link:https://hub.docker.com/r/projectatomic/ascii_binder/[AsciiBinder container].
 
 First, fork the atomic-host-docs repository and `git clone` it.  Second, install
 the docker runtime and CLI if you don't already have it.  Then navigate to
