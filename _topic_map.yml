@@ -27,7 +27,7 @@ Topics:
   - Name: Welcome
     File: index
 
---- 
+---
 Name: Introduction
 Dir: introduction
 Topics:
@@ -71,7 +71,7 @@ Topics:
     - Name: Magnum
       File: magnum
 
-    
+
 ---
 Name: Quick Start
 Dir: quick_start
@@ -146,7 +146,7 @@ Topics:
   - Name: Creating Own Distribution
     Dir: creating_own_distribution
     Topics:
-    - Name: OSTree Compose 
+    - Name: OSTree Compose
       File: ostree_compose
     - Name: OSTree Server
       File: ostree_server
@@ -219,7 +219,7 @@ Topics:
       File: puppet
     - Name: Others
       File: others
-      
+
 ---
 Name: Atomic Tools
 Dir: atomic_tools
@@ -264,7 +264,7 @@ Topics:
 Name: References
 Dir: references
 Topics:
-- Name: SELinux and Containers 
+- Name: SELinux and Containers
   File: selinux_containers_troubleshooting
 - Name: RPM-OSTree Command Reference
   File: rpm_ostree_command_ref
