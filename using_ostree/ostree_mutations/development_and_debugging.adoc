@@ -1,0 +1,63 @@
+[[ostree-mutation]]
+= Changing Atomic Host at runtime for development and hotfixes
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+While a major goal of Atomic Host is to focus on "immutable infrastructure", in
+practice, no software is perfect; it needs to be convenient to debug and
+test fixes on one or more running systems, whether that's testing new features
+during a development cycle, or debugging a performance problem in production
+by testing a patch, or applying a hotfix for a critical security update without
+rebooting.
+
+The goal more precisely then is "controlled mutability" - we want to make it
+harder to accidentally change things, and to recover/reset from local changes. A
+related goal is to increase protection against malicious changes.
+
+There are a few possible scenarios here, but one we'll focus on first is:
+
+Suppose you want to patch the `docker` service; again, this might be testing out
+an entirely new version, or applying a patch to a production version. We'll
+assume you already have RPMs (or a new binary), and want to install them.
+
+You'll note that by default `rpm -Uvh /path/to/docker.rpm` won't work due
+to the immutable state.
+
+== Using `ostree admin unlock`
+
+The `ostree admin unlock` command is a powerful general purpose tool
+for development and testing.  It mounts an overlay filesystem on top
+of `/usr` that goes away when the system reboots.  This allows completely
+arbitrary changes (not just installing RPMs).  In our scenario though,
+we want to test out the newer `docker` version.
+
+....
+# ostree admin unlock
+Development mode enabled.  A writable overlayfs is now mounted on /usr.
+All changes there will be discarded on reboot.
+....
+
+
+Note that if you invoke `rpm-ostree status`, you'll see the unlocked
+state.  Let's download the version we want to test and install via
+`rpm` (which now works):
+
+....
+# for x in https://kojipkgs.fedoraproject.org//packages/docker/1.13.1/28.gitb5e3294.fc27/x86_64/docker-{common-,rhel-push-plugin-,}1.13.1-28.gitb5e3294.fc27.x86_64.rpm; do curl -L -O $x; done
+# rpm -Uvh docker*.rpm
+....
+
+The rpm script will normally have already invoked `systemctl restart docker`,
+but it's a good idea to verify now that the running version is updated.
+
+At this point, you can perform any testing you want.
+
+To undo the change, start a system reboot with `systemctl reboot`. You can also
+simply keep the changes applied; the next time you perform a system upgrade
+via `rpm-ostree upgrade`, all of the overlay changes will also be discarded.
+
+== Using `rpm-ostree ex override replace`
+
+TODO

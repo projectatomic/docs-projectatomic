@@ -59,8 +59,9 @@ Administration/Installing Software/OSTree Mutations
     * Browsing History
   * Updates
   * Rebasing
-    * OSTree Mutations
+  * OSTree Mutations
     * Package Layering
+    * Development and hotfixing
     * Overrides
     * Livefs
     * Rolling Back
