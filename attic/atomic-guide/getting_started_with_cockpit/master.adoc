@@ -1,0 +1,9 @@
+= Getting Started with Cockpit
+:imagesdir: images
+
+== Overview
+include::content/overview.adoc[leveloffset=+1]
+== Installing and Enabling Cockpit
+include::content/installing_cockpit.adoc[leveloffset=+1]
+== Using Cockpit
+include::content/using_cockpit.adoc[leveloffset=+1]
