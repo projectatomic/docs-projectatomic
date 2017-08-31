@@ -141,8 +141,6 @@ Topics:
       File: package_layering
     - Name: Overrides
       File: overrides
-    - Name: LiveFS
-      File: livefs
     - Name: Rollback
       File: rollback
   - Name: Creating Own Distribution
