@@ -151,6 +151,8 @@ kernel modules, or userspace driver daemons such as `pcsc-lite-ccid`.
 While most software should go into a container, you have full flexibilty
 to use packages where it suits.
 
+See the link:../using_ostree/ostree_mutations/package_layering.adoc[package layering section] for more information on package layering.
+
 
 === `rpm-ostree install/uninstall <pkg>`
 
@@ -183,7 +185,7 @@ layered packages and local state will be carried across.
 The `rebase` command also allows you to switch your system to an entirely new
 OS distribution.  This means it is possible to switch your Fedora 26 Atomic Host
 to a version of CentOS Atomic Host.  While this is not likely to be done on a
-production system, it can be useful in certain testing scenrios.
+production system, it can be useful in certain testing scenarios.
 
 
 == Other local state changes
