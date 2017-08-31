@@ -1,0 +1,38 @@
+[[rollback]]
+= {product-title} Rollback
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+=== Rollback
+
+==== Using the atomic command
+
+To switch back to the other downloaded tree on your system, use
+`atomic host rollback`. This command is particularly useful when there is a
+problem after upgrade (for example the new packages break a service
+that you’ve configured) because it lets you quickly switch back to the
+previous state.
+....
+$ atomic host rollback
+....
+
+You can use the -r option to initiate a reboot immediately:
+....
+$ atomic host rollback -r
+....
+
+
+==== Using rpm-ostree
+
+If you want to rollback to a previous tree using the `rpm-ostree` command. You
+can invoke:
+....
+$ rpm-ostree rollback
+....
+
+You can also add `--reboot` argument to initiate a reboot immediately.
+....
+$ rpm-ostree rollback --reboot
+....
