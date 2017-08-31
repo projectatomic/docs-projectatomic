@@ -1,0 +1,113 @@
+[[ostree-livefs]]
+= Live updates with LiveFS
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+rpm-ostree now has experimental support for applying some updates live without the need to reboot by using the `rpm-ostree ex livefs` command (the `ex` command groups new features that are not ready to be declared stable; details of how these commands work may change in the future).
+
+For now, the `livefs` command only works in situations where the only difference between the pending deployment and the current deployment is added packages. Here's an example using the `livefs` command:
+
+....
+# rpm-ostree status
+State: idle
+Deployments:
+* vmcheck
+              Timestamp: 2017-06-02 19:45:32
+                 Commit: 3f5650aeffe16474584b57c6ec0654e6fd96c3c60d998a04b1e550e61556d8ab
+# ltrace
+bash: ltrace: command not found
+# rpm -q ltrace
+package ltrace is not installed
+....
+
+We don't have ltrace installed, so let's overlay it: 
+
+....
+# rpm-ostree install ltrace
+Checking out tree 3f5650a... done
+Enabled rpm-md repositories: fedora-cisco-openh264 updates fedora jlebon
+rpm-md repo 'fedora-cisco-openh264' (cached); generated: 2017-03-24 17:58:10
+rpm-md repo 'updates' (cached); generated: 2017-06-02 01:51:29
+rpm-md repo 'fedora' (cached); generated: 2016-11-15 19:49:18
+rpm-md repo 'jlebon' (cached); generated: 2017-05-08 16:24:16
+
+Importing metadata [========================================================100%
+Resolving dependencies... done
+Will download: 1 package (159.2 kB)
+
+  Downloading from fedora: [================================================100%
+
+Importing: [================================================================100%
+Overlaying... done
+Writing rpmdb... done
+Writing OSTree commit... done
+Copying /etc changes: 26 modified, 0 removed, 103 added
+Transaction complete; bootconfig swap: yes deployment count change: 1
+Added:
+  ltrace-0.7.91-20.fc25.x86_64
+Run "systemctl reboot" to start a reboot
+# rpm-ostree status
+State: idle
+Deployments:
+  vmcheck
+              Timestamp: 2017-06-02 19:45:32
+             BaseCommit: 3f5650aeffe16474584b57c6ec0654e6fd96c3c60d998a04b1e550e61556d8ab
+        LayeredPackages: ltrace
+
+* vmcheck
+              Timestamp: 2017-06-02 19:45:32
+                 Commit: 3f5650aeffe16474584b57c6ec0654e6fd96c3c60d998a04b1e550e61556d8ab
+....
+
+Normally, at this point, we'd have to reboot. However, since we just added a package, we can use the `livefs` command instead to get the changes immediately applied:
+
+....
+# rpm-ostree ex livefs
+notice: "livefs" is an experimental command and subject to change.
+Diff Analysis: 3f5650aeffe16474584b57c6ec0654e6fd96c3c60d998a04b1e550e61556d8ab => f71fedccd227b5112b461b466106e069bf2c1c2de21f1554abda72297594e8a0
+Files:
+ modified: 0
+ removed: 0
+ added: 15
+Packages:
+ modified: 0
+ removed: 0
+ added: 1
+Preparing new rollback matching currently booted deployment
+Copying /etc changes: 26 modified, 0 removed, 103 added
+Transaction complete; bootconfig swap: yes deployment count change: 1
+Overlaying /usr... done
+# ltrace
+ltrace: too few arguments
+Try `ltrace --help' for more information.
+# rpm -q ltrace
+ltrace-0.7.91-20.fc25.x86_64
+....
+
+The livefs command created a rollback deployment of the original commit we booted into, because it modifies the deployment itself permanently. You can see this modification reflected in the output of the status command:
+
+....
+# rpm-ostree status
+State: idle
+Deployments:
+  vmcheck
+              Timestamp: 2017-06-02 19:45:32
+             BaseCommit: 3f5650aeffe16474584b57c6ec0654e6fd96c3c60d998a04b1e550e61556d8ab
+                 Commit: f71fedccd227b5112b461b466106e069bf2c1c2de21f1554abda72297594e8a0
+        LayeredPackages: ltrace
+
+* vmcheck
+              Timestamp: 2017-06-02 19:45:32
+           BootedCommit: 3f5650aeffe16474584b57c6ec0654e6fd96c3c60d998a04b1e550e61556d8ab
+             LiveCommit: f71fedccd227b5112b461b466106e069bf2c1c2de21f1554abda72297594e8a0
+
+  vmcheck
+              Timestamp: 2017-06-02 19:45:32
+                 Commit: 3f5650aeffe16474584b57c6ec0654e6fd96c3c60d998a04b1e550e61556d8ab
+....
+
+The `BootedCommit` is the commit we original started with, whereas the `LiveCommit` is the commit that was applied to the live deployment.
+
+As mentioned earlier, this feature is still in experimental mode, and is subject to change. Discussions are still ongoing upstream as to the finer details of the command and expected use cases.

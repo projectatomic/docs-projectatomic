@@ -130,6 +130,8 @@ Topics:
     Topics:
     - Name: Updates
       File: updates
+    - Name: Live updates with LiveFS
+      File: livefs
   - Name: Rebasing
     Dir: rebasing
     Topics:
