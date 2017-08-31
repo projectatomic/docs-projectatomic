@@ -151,7 +151,7 @@ kernel modules, or userspace driver daemons such as `pcsc-lite-ccid`.
 While most software should go into a container, you have full flexibilty
 to use packages where it suits.
 
-See the link:../using_ostree/ostree_mutations/package_layering.adoc[package layering section] for more information on package layering.
+See the link:../using_ostree/rebasing/package_layering.html[package layering section] for more information on package layering.
 
 
 === `rpm-ostree install/uninstall <pkg>`
@@ -220,34 +220,109 @@ of the initramfs after its configuration has changed or a kernel driver has been
 You can query the state of initramfs regeneration by using the command without any
 options.
 
-Or you can enable/disable the regeneration by using the `--enable` or `--disable`
+You can enable/disable the regeneration by using the `--enable` or `--disable`
 options respectively.
 
 === `rpm-ostree reload`
 
+The `rpm-ostree reload` command is used to reload the `rpm-ostreed` daemon that runs
+on a system.  This should be done when configuration of the daemon changes, for example
+when something a remote configuration in `/etc/ostree/remotes.d` has been modified.
+
 
 == Querying the RPM database
 
-=== `rpm-ostree db diff`
+The `rpm-ostree db` command allows the user to inspect RPM data of the ostree commit/deployment.
 
-=== `rpm-ostree db list`
+=== `rpm-ostree db diff <commit> <commit>`
 
-=== `rpm-ostree db version`
+The `rpm-ostree db diff` command allows the user to compare the differences of the package
+set between two commits.  By default, the output will show the packages which have been
+upgrade, downgraded, added, or removed between the commits.
 
+Example output on Fedora 26 Atomic Host:
+
+....
+# rpm-ostree db diff 080cf9c61a5e 13ed0f241c | head -n 10
+ostree diff commit old: 080cf9c61a5e (080cf9c61a5e38f8101290db5025a71fc6cfb189a9393785ba347d006d6285ee)
+ostree diff commit new: 13ed0f241c (13ed0f241c9945fd5253689ccd081b5478e5841a71909020e719437bbeb74424)
+Upgraded:
+  glibc 2.25-7.fc26.x86_64 -> 2.25-8.fc26.x86_64
+  glibc-all-langpacks 2.25-7.fc26.x86_64 -> 2.25-8.fc26.x86_64
+  glibc-common 2.25-7.fc26.x86_64 -> 2.25-8.fc26.x86_64
+  krb5-libs 1.15.1-21.fc26.x86_64 -> 1.15.1-22.fc26.x86_64
+  libcrypt-nss 2.25-7.fc26.x86_64 -> 2.25-8.fc26.x86_64
+  python2-setuptools 36.2.0-1.fc26.noarch -> 36.2.0-2.fc26.noarch
+  python3 3.6.2-1.fc26.x86_64 -> 3.6.2-5.fc26.x86_64
+....
+
+=== `rpm-ostree db list <commit>`
+
+The `rpm-ostree db list` command will list all the packages and their versions that are
+contained in a commit.
+
+Example output from Fedora 26 Atomic Host:
+
+....
+# rpm-ostree db list 080cf9c61a5e | head -n 10
+ostree commit: 080cf9c61a5e (080cf9c61a5e38f8101290db5025a71fc6cfb189a9393785ba347d006d6285ee)
+ GeoIP-1.6.11-1.fc26.x86_64
+ GeoIP-GeoLite-data-2017.07-1.fc26.noarch
+ NetworkManager-1:1.8.2-1.fc26.x86_64
+ NetworkManager-libnm-1:1.8.2-1.fc26.x86_64
+ NetworkManager-team-1:1.8.2-1.fc26.x86_64
+ acl-2.2.52-15.fc26.x86_64
+ atomic-1.18.1-5.fc26.x86_64
+ atomic-devmode-0.3.7-1.fc26.noarch
+ atomic-registries-1.18.1-5.fc26.x86_64
+....
+
+=== `rpm-ostree db version <commit>`
+
+The `rpm-ostree db version` command will display the version of the RPM database for the
+ostree commit provided.
+
+Example output from Fedora 26 Atomic Host:
+
+....
+# rpm-ostree db version 080cf9c61a5e
+ostree commit: 080cf9c61a5e (080cf9c61a5e38f8101290db5025a71fc6cfb189a9393785ba347d006d6285ee)
+  rpmdbv is:                       463:0a72e882be36a47eb580d89f0304a9876660f751
+....
 
 == Composing an ostree commit
 
-=== `rpm-ostree compose tree`
+The `rpm-ostree` command has support for generating an ostree commit that can be used by
+existing Atomic Hosts.  The only input required is a JSON formatted 'treefile' which defines
+how the compose will be constructed.
 
+See the section on link:../using_ostree/creating_own_distribution/ostree_compose.html[ostree compose] for more details.
+
+=== `rpm-ostree compose tree <treefile>`
+
+The `rpm-ostree compose tree` command will install RPMs into a filesystem and commit that filesystem via ostree.
 
 == Experimental interface
 
-There is a generic `rpm-ostree ex` command that offers experimental features.
-
-=== `rpm-ostree ex container`
+There is a generic `rpm-ostree ex` command that offers experimental features.  These features are not production read
+and should be treated as such.  These commands may or may not be promoted to supported, which means they may be dropped
+from the tool altogether in the future.
 
 === `rpm-ostree ex livefs`
 
+The `rpm-ostree ex livefs` command will apply any pending changes (for example, a package layered via `rpm-ostree install`)
+to the currently booted deployment.  This allows the user to install packages and begin using them without having to reboot the
+system.
+
 === `rpm-ostree ex override`
 
-=== `rpm-ostree ex unpack`
+The `rpm-ostree ex override` command allows the user to override the current package set of a deployment by removing or replacing
+packages from the base package set.  Using these overrides requires that ther user reboot the system, as `rpm-ostree ex livefs` only
+supports packages that have been added via `rpm-ostree install`.
+
+`rpm-ostree ex override remove` will remove a package from the base package set of a deployment.
+
+`rpm-ostree ex override replace` will replace a package in the base package set of a deployment.
+
+`rpm-ostree ex override reset` will reset any package overrides that have been made.
+
