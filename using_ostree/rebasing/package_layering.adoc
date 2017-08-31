@@ -1,0 +1,123 @@
+[[package-layering]]
+= Package Layering
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+One of the strengths of Atomic Host is that updates are delivered as units of
+well-tested package sets. There are situations however where one wants to be
+able to expand upon this set and install additional packages that are not fit
+for containerization. A common example includes kernel modules. This flexibility
+comes with a trade-off however; we are no longer using the exact OSTree commit
+that was tested and shipped.
+
+rpm-ostree supports layering packages from yum repos as well as locally.
+
+=== Layering packages from yum repos
+
+To install a package from the repositories, we can use the `install` command.
+For example, to install `ltrace`, we can do:
+
+....
+$ rpm-ostree install ltrace
+....
+
+rpm-ostree will use the repos in the standard `/etc/yum.repos.d/` directory to
+try to resolve the package name given. rpm-ostree also supports more
+sophisticated queries. For example, one can specify a file path:
+
+....
+$ rpm-ostree install /usr/bin/ltrace
+....
+
+As well as various version specifications:
+
+....
+$ rpm-ostree install ltrace.x86_64          # name and arch
+$ rpm-ostree install ltrace-0.7.91-22.fc26  # full package name
+$ rpm-ostree install 'ltrace > 0.7.91'      # minimum version range
+....
+
+Once the operation completes, the output of the `status` command will reflect
+this change:
+
+....
+$ rpm-ostree status
+State: idle
+Deployments:
+  fedora-atomic:fedora/26/x86_64/atomic-host
+                   Version: 26.113 (2017-08-24 03:43:00)
+                BaseCommit: 7c1f406901ef991dd556b1a69b008f63346f4fcf831dccdf9cb115c76385a246
+           LayeredPackages: ltrace
+
+* fedora-atomic:fedora/26/x86_64/atomic-host
+                   Version: 26.113 (2017-08-24 03:43:00)
+                    Commit: 7c1f406901ef991dd556b1a69b008f63346f4fcf831dccdf9cb115c76385a246
+....
+
+The new `LayeredPackages` line indicates that the `ltrace` package is overlaid
+on top of the base OSTree commit.
+
+=== Layering packages locally
+
+The `install` command can also use local RPMs:
+
+....
+$ ls -la ltrace-0.7.91-22.fc26.x86_64.rpm
+-rw-r--r--. 1 root root 157858 Aug 31 15:12 ltrace-0.7.91-22.fc26.x86_64.rpm
+$ rpm-ostree install ltrace-0.7.91-22.fc26.x86_64.rpm
+....
+
+Once the operation completes, the output of the `status` command will reflect
+this change:
+
+....
+$ rpm-ostree status
+State: idle
+Deployments:
+  fedora-atomic:fedora/26/x86_64/atomic-host
+                   Version: 26.113 (2017-08-24 03:43:00)
+                BaseCommit: 7c1f406901ef991dd556b1a69b008f63346f4fcf831dccdf9cb115c76385a246
+             LocalPackages: ltrace-0.7.91-22.fc26.x86_64
+
+* fedora-atomic:fedora/26/x86_64/atomic-host
+                   Version: 26.113 (2017-08-24 03:43:00)
+                    Commit: 7c1f406901ef991dd556b1a69b008f63346f4fcf831dccdf9cb115c76385a246
+....
+
+Unlike repo RPMs, local RPMs show up in a different field: `LocalPackages`. The
+distinction between the two will become clearer in the Upgrades section.
+
+=== Removing layered packages
+
+Layered packages can be removed using the `uninstall` command:
+
+....
+$ rpm-ostree uninstall ltrace-0.7.91-22.fc26.x86_64
+$ rpm-ostree status
+State: idle
+Deployments:
+  fedora-atomic:fedora/26/x86_64/atomic-host
+                   Version: 26.113 (2017-08-24 03:43:00)
+                    Commit: 7c1f406901ef991dd556b1a69b008f63346f4fcf831dccdf9cb115c76385a246
+
+* fedora-atomic:fedora/26/x86_64/atomic-host
+                   Version: 26.113 (2017-08-24 03:43:00)
+                BaseCommit: 7c1f406901ef991dd556b1a69b008f63346f4fcf831dccdf9cb115c76385a246
+             LocalPackages: ltrace-0.7.91-22.fc26.x86_64
+....
+
+=== Package layering and upgrades
+
+Layered packages are automatically reapplied on new deployments created through
+the `upgrade`, `deploy`, or `rebase` commands. For repo packages, the latest
+version of the package will be installed. If the new deployment *already* has
+the package as part of its base tree, the layered package will essentially be
+deemed "inactive". If a later deployment no longer has the package, it will be
+actively layered once more.
+
+Unlike repo packages, local RPMs are *never* upgraded during redeployments. They
+are locked at the version of the RPM they were installed from. One can always
+`uninstall` the local package first, and then `install` from the repos to switch
+from a local RPM to a repo RPM.
