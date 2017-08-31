@@ -1,0 +1,107 @@
+[[atomic-install]]
+= {product-title} Atomic CLI Install/Uninstall Command
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+=== atomic install/uninstall
+
+The atomic install command:
+
+* For a docker container, executes an images's install method defined in the _LABEL INSTALL_ field.
+* For a system container, creates a checkout of the container image and installs necessary files.
+
+The atomic uninstall command:
+
+* For a docker container, executes an images's uninstall method defined in the _LABEL UNINSTALL_ field.
+* For a system container, removes the checkout locations for the container and deletes and files installed to the host.
+
+==== docker container install
+
+....
+atomic install <image>
+....
+
+Executes an image's install method. The install method is described in the _LABEL INSTALL_ field in the container image. It is typically used to prepare the host system to run the image. It often exposes configuration files needed for the image to the host so they can be edited and saved if the image is deleted. For example, this install method:
+
+....
+# atomic info registry.fedoraproject.org/f26/etcd
+[output truncated]
+install: /usr/bin/docker run --rm $OPT1 --privileged -v /:/host -e HOST=/host -e NAME=$NAME -e IMAGE=$IMAGE $IMAGE $OPT2 /usr/bin/install.sh  $OPT3
+....
+
+executes the following command:
+
+....
+# atomic install registry.fedoraproject.org/f26/etcd
+/usr/bin/docker run --rm --privileged -v /:/host -e HOST=/host -e NAME=etcd -e IMAGE=registry.fedoraproject.org/f26/etcd registry.fedoraproject.org/f26/etcd /usr/bin/install.sh
+....
+
+With this instruction, *atomic install* mounts files from the root directory (_/_) on the host to the _/host/_ directory inside the container and sets the _$HOST_ variable as _/host/_ inside the container. For example, _/usr/bin_ is _/host/usr/bin_ in the container, _$IMAGE_ is _registry.fedoraproject.org/f26/etcd_ and _$NAME_ is _etcd_. The _/bin/install.sh_ script installs the systemd unit file to the host and restores selinux context in this use case.
+
+If you do not have the image locally, *atomic install* pulls the image from a configured registry. Use the *--display* option to show the image's install method. The install command does not execute if *--display* is specified.
+
+==== docker container uninstall
+
+....
+atomic uninstall <image>
+....
+
+Similar to *install*, *uninstall* reads and executes an image's uninstall method from the _UNINSTALL_ instruction.
+
+....
+# atomic info registry.fedoraproject.org/f26/etcd
+[output truncated]
+uninstall: /usr/bin/docker run --rm \$OPT1 --privileged -v /:/host -e HOST=/host -e NAME=\$NAME -e IMAGE=\$IMAGE \$IMAGE \$OPT2 /usr/bin/uninstall.sh \$OPT3
+....
+
+When executed, it will perform the command as follows:
+
+....
+# atomic uninstall registry.fedoraproject.org/f26/etcd
+/usr/bin/docker run --rm --privileged -v /:/host -e HOST=/host -e NAME=etcd -e IMAGE=registry.fedoraproject.org/f26/etcd registry.fedoraproject.org/f26/etcd /usr/bin/uninstall.sh
+....
+
+==== system container install
+
+....
+atomic install --system <image>
+....
+
+Executes an install for a system container. This will create a hard-linked checkout of the image to `/var/lib/containers/atomic/${NAME}.0`, creating the runC configuration file `config.json`, systemd service file `${NAME}.service` and systemd tmpfiles configuration file `tmpfiles-${NAME}.conf`, where applicable. This will also create the systemd service on the host, as well as install necessary files to the host as defined by the container.
+
+As an example, when you run the install command on the etcd system container:
+
+....
+# atomic install --system registry.fedoraproject.org/f26/etcd
+Extracting to /var/lib/containers/atomic/etcd.0
+systemctl daemon-reload
+systemd-tmpfiles --create /etc/tmpfiles.d/etcd.conf
+systemctl enable etcd
+....
+
+==== system container uninstall
+
+....
+atomic uninstall <container>
+....
+
+Removes the system container checkout location and removes files installed to the host. Note that the container name should be used for the container to be uninstalled, and not the image name.
+
+....
+# atomic uninstall etcd
+systemctl stop etcd
+systemctl disable etcd
+systemd-tmpfiles --remove /etc/tmpfiles.d/etcd.conf
+....
+
+==== other flags and options
+
+Use the *-n* option to define the name of the installed container. Useful when attempting to install multiple copies of an image. Works for both docker and system containers.
+
+....
+# atomic install -n etcd1 registry.fedoraproject.org/f26/etcd
+# atomic install -n etcd2 registry.fedoraproject.org/f26/etcd
+....
+

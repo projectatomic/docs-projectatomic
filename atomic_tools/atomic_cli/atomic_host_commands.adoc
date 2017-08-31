@@ -1,0 +1,70 @@
+[[atomic-host-commands]]
+= {product-title} Atomic Host Commands
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+=== atomic host
+
+This subcommand is a high-level wrapper for the *rpm-ostree*, tool which performs upgrades, rollbacks, and system state inspection.
+
+* `atomic host status`
+
+Lists information about all deployments. The asterisk (`*`) marks the currently running deployment.
+
+....
+# atomic host status
+State: idle
+Deployments:
+* local:fedora/26/x86_64/updates/atomic-host
+                   Version: 26.115 (2017-08-26 19:46:28)
+                    Commit: a8db0b7d3f2e54e4092d5ed640087934b8424637cfa1e3ce4bbaf7ccccfd09a5
+
+  local:fedora/26/x86_64/updates/atomic-host
+                   Version: 26.110 (2017-08-20 18:10:09)
+                    Commit: 13ed0f241c9945fd5253689ccd081b5478e5841a71909020e719437bbeb74424
+....
+
+* `atomic host rollback`
+
+Switches to the other installed tree at the next boot. You can use the *-r* option to initiate a reboot after rollback is prepared:
+
+....
+# atomic host rollback -r
+....
+
+* `atomic host upgrade`
+
+Upgrades to the latest OSTree if available. This can take a few minutes. When done, it gives you a full list of *changed*, *removed*, and *added* packages. The newly downloaded tree boots automatically at next reboot.
+
+* `atomic host deploy`
+
+Allows you to specify a particular version of an OSTree and deploy it. This command is more flexible than *upgrade* or *rollback*, as they only alternate between the two installed OSTrees. The newly downloaded tree replaces the one that is not currently deployed. The syntax is as follows:
+
+....
+atomic host deploy <version/commit ID>
+....
+
+For example, use this command to deploy the 26.100 OSTree and initiate a reboot after the tree is downloaded:
+
+....
+# atomic host deploy 26.100 -r
+....
+
+Use the *--preview* option to check the package difference between your currently deployed tree and a specified one:
+
+....
+# atomic host deploy 26.100 --preview
+....
+
+If you are unsure about the version numbering, pull the commit history for the repository you are subscribed to by using the following *ostree* commands:
+
+....
+# ostree pull --commit-metadata-only --depth=-1 fedora-atomic:fedora/26/x86_64/updates/atomic-host
+# ostree log fedora/26/x86_64/updates/atomic-host
+....
+
+When you have the version number you are interested in you can use the *atomic host <version> --preview* command to check the package differences.
+
+You can have at most two deployments on the system. *upgrade* or *deploy* downloads a new tree and replaces the currently not deployed one. You can then alternate between both trees on the system with *rollback*.
