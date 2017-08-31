@@ -1,0 +1,5 @@
+= Goals of {product-title}
+
+{product-title} is a lightweight container operating system designed and optimized to run containers. It follows the principles of _immutable infrastructure_: each {product-title} is imaged from an upstream repository and supports mass deployment to any number of servers. All applications on {product-title} run in containers, in isolation from the host system, which enables the host system to run other software without conflicts with these processes.
+
+// I'm actually not sure this section is necessary in the docs. It might be enough if you just link to https://www.projectatomic.io/. It's better to avoid duplication.
