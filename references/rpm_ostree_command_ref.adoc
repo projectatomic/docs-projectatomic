@@ -1,0 +1,328 @@
+[[rpm-ostree-command-ref]]
+= {product-title} rpm-ostree Command Reference
+{product-author}
+{product-version}
+:data-uri:
+:icons:
+
+== Primary 'rpm-ostree' commands
+
+At the moment, there are four primary commands to be familiar with on
+an `rpm-ostree` based system.  Also remember that in a Project Atomic
+system, the `atomic host` command (from the
+link:https://github.com/projectatomic/atomic/[`atomic` command]) is an
+alias for `rpm-ostree`.
+
+
+=== `rpm-ostree status`
+
+The `rpm-ostree status` command will show you your deployments in the order in
+which they will appear in the bootloader, the first deployment in the list being
+the current default one. The `●` shows the currently booted deployment.  This
+command can be run as a non-root user, unlike other `rpm-ostree` commands.
+
+The `rpm-ostree status` command also supports formatting the output in JSON
+format using the `--json` flag.
+
+You can see the example output from a Fedora 26 Atomic Host system:
+
+....
+# rpm-ostree status
+State: idle
+Deployments:
+● fedora-atomic:fedora/26/x86_64/atomic-host
+                   Version: 26.110 (2017-08-20 18:10:09)
+                    Commit: 13ed0f241c9945fd5253689ccd081b5478e5841a71909020e719437bbeb74424
+....
+
+
+=== `rpm-ostree upgrade`
+
+The `rpm-ostree upgrade` command will perform a system upgrade, creating a
+*new* deployment (root filesystem) and set it as the default for the next boot.
+You should use `systemctl reboot` shortly afterwards.  Alteratively, you can use
+the `-r` flag to force a reboot immediately after the upgrade has completed.
+
+You can see some example output for an upgrade on a Fedora 26 Atomic Host below:
+
+....
+# rpm-ostree upgrade
+1 metadata, 0 content objects fetched; 569 B transferred in 1 seconds
+Copying /etc changes: 24 modified, 0 removed, 56 added
+Transaction complete; bootconfig swap: yes deployment count change: 0
+Upgraded:
+  glibc 2.25-7.fc26 -> 2.25-8.fc26
+  glibc-all-langpacks 2.25-7.fc26 -> 2.25-8.fc26
+  glibc-common 2.25-7.fc26 -> 2.25-8.fc26
+  krb5-libs 1.15.1-21.fc26 -> 1.15.1-22.fc26
+  libcrypt-nss 2.25-7.fc26 -> 2.25-8.fc26
+  python2-setuptools 36.2.0-1.fc26 -> 36.2.0-2.fc26
+  python3 3.6.2-1.fc26 -> 3.6.2-5.fc26
+  python3-libs 3.6.2-1.fc26 -> 3.6.2-5.fc26
+  python3-setuptools 36.2.0-1.fc26 -> 36.2.0-2.fc26
+  system-python 3.6.2-1.fc26 -> 3.6.2-5.fc26
+  system-python-libs 3.6.2-1.fc26 -> 3.6.2-5.fc26
+  tmux 2.5-1.fc26 -> 2.5-4.fc26
+Run "systemctl reboot" to start a reboot
+....
+
+=== `rpm-ostree rollback`
+
+The `rpm-ostree rollback` command will roll back the system to the previous state,
+i.e. the default deployment changes places with the non-default one.  By default, the
+`rpm-ostree upgrade` will keep at most two bootable "deployments", though the underlying
+technology supports more.  Like the `rpm-ostree upgrade` command, the system needs to be
+rebooted in order to make the newly selected deployment active.  You can also use the
+`-r` flag to reboot the system immediately after the rollback completes.
+
+You can see some example output of a rollback on a Fedora 26 Atomic Host:
+
+....
+# rpm-ostree rollback
+Moving '080cf9c61a5e38f8101290db5025a71fc6cfb189a9393785ba347d006d6285ee.0' to be first deployment
+Transaction complete; bootconfig swap: yes deployment count change: 0
+Downgraded:
+  glibc 2.25-8.fc26 -> 2.25-7.fc26
+  glibc-all-langpacks 2.25-8.fc26 -> 2.25-7.fc26
+  glibc-common 2.25-8.fc26 -> 2.25-7.fc26
+  krb5-libs 1.15.1-22.fc26 -> 1.15.1-21.fc26
+  libcrypt-nss 2.25-8.fc26 -> 2.25-7.fc26
+  python2-setuptools 36.2.0-2.fc26 -> 36.2.0-1.fc26
+  python3 3.6.2-5.fc26 -> 3.6.2-1.fc26
+  python3-libs 3.6.2-5.fc26 -> 3.6.2-1.fc26
+  python3-setuptools 36.2.0-2.fc26 -> 36.2.0-1.fc26
+  system-python 3.6.2-5.fc26 -> 3.6.2-1.fc26
+  system-python-libs 3.6.2-5.fc26 -> 3.6.2-1.fc26
+  tmux 2.5-4.fc26 -> 2.5-1.fc26
+Run "systemctl reboot" to start a reboot
+....
+
+=== `rpm-ostree deploy <version>`
+
+The `rpm-ostree deploy` command makes use of the server-side history
+feature of OSTree. It will search the history of the current branch for
+a commit with the specified version, and deploy it.  This can be used
+in scripts to ensure consistent updates.  For example, if the upstream
+OS vendor provides an update online, you might not want to deploy it until
+you've tested it.  This helps ensure that when you upgrade, you are
+getting exactly what you asked for.
+
+You can see the some example output of a deploy on a Fedora 26 Atomic Host:
+
+....
+# rpm-ostree deploy 26.109
+Resolving version '26.109'
+1 metadata, 0 content objects fetched; 569 B transferred in 3 seconds
+
+138 metadata, 2011 content objects fetched; 114566 KiB transferred in 672 seconds
+Copying /etc changes: 24 modified, 0 removed, 55 added
+Transaction complete; bootconfig swap: yes deployment count change: 1
+Freed objects: 2.3 kB
+Downgraded:
+  glibc 2.25-8.fc26 -> 2.25-7.fc26
+  glibc-all-langpacks 2.25-8.fc26 -> 2.25-7.fc26
+  glibc-common 2.25-8.fc26 -> 2.25-7.fc26
+  krb5-libs 1.15.1-22.fc26 -> 1.15.1-21.fc26
+  libcrypt-nss 2.25-8.fc26 -> 2.25-7.fc26
+  python2-setuptools 36.2.0-2.fc26 -> 36.2.0-1.fc26
+  python3 3.6.2-5.fc26 -> 3.6.2-1.fc26
+  python3-libs 3.6.2-5.fc26 -> 3.6.2-1.fc26
+  python3-setuptools 36.2.0-2.fc26 -> 36.2.0-1.fc26
+  system-python 3.6.2-5.fc26 -> 3.6.2-1.fc26
+  system-python-libs 3.6.2-5.fc26 -> 3.6.2-1.fc26
+  tmux 2.5-4.fc26 -> 2.5-1.fc26
+Run "systemctl reboot" to start a reboot
+....
+
+== Hybrid image/packaging via package layering
+
+It is possible to dynamically add more packages onto the system that are not
+part of the commit composed on the server. These additional "layered" packages
+are persistent across upgrades, rebases, and deploys (contrast with the
+link:https://github.com/ostreedev/ostree/blob/master/man/ostree-admin-unlock.xml[ostree unlocking]
+mechanism).
+
+This is where the true hybrid image/package nature of `rpm-ostree` comes into
+play; you get a combination of the benefits of images and packages.  The
+package updates are still fully transactional and offline.
+
+For example, you can use package layering to install 3rd party
+kernel modules, or userspace driver daemons such as `pcsc-lite-ccid`.
+While most software should go into a container, you have full flexibilty
+to use packages where it suits.
+
+See the link:../using_ostree/rebasing/package_layering.html[package layering section] for more information on package layering.
+
+
+=== `rpm-ostree install/uninstall <pkg>`
+
+The `rpm-ostree install` command will download the target package, its dependencies,
+and create a new deployment with those packages installed.  Additionally, you can use
+the `rpm-ostree install` to layer local RPMs onto the system.  To remove layered
+packages, use `rpm-ostree uninstall`.
+
+By default, every `rpm-ostree` operation is "offline" - it has no effect
+on your running system, and will only take effect when you reboot.  This
+"pending" state is called the "pending deployment".  Operations can be chained;
+for example, if you invoke `rpm-ostree upgrade` after installing a package, your
+new root will upgraded with the package also installed.
+
+
+== Rebasing via `rpm-ostree rebase`
+
+Your operating system vendor may provide multiple base branches.  For example,
+Fedora Atomic Host has branches of the form:
+
+ - `fedora/26/x86_64/atomic-host`
+ - `fedora/26/x86_64/updates/atomic-host`
+ - `fedora/27/x86_64/atomic-host`
+
+You can use the `rebase` command to switch between these; this can represent a
+major version upgrade, or logically switching between different "testing"
+streams within the same release. Like every other `rpm-ostree` operation, All
+layered packages and local state will be carried across.
+
+The `rebase` command also allows you to switch your system to an entirely new
+OS distribution.  This means it is possible to switch your Fedora 26 Atomic Host
+to a version of CentOS Atomic Host.  While this is not likely to be done on a
+production system, it can be useful in certain testing scenarios.
+
+
+== Other local state changes
+
+=== `rpm-ostree cleanup`
+
+The `rpm-ostree cleanup` command allows the user to remove data generated by
+`rpm-ostree` operations which is no longer used.  This includes non-booted
+deployments, cached RPM repodata, partially downloaded RPMs, or transient
+allocated data as result of interrupted operations.
+
+The `-b` flag will remove the data remaining from interrupted operations.
+If you want to free up space on your system, use this options first.
+
+The `-m` flag will remove the cached RPM repodata and partially downloaded
+RPMs.
+
+The `-p` flag will remove the pending deployment (usually as a result of an
+upgrade or an install operation).
+
+The `-r` flag will remove the rollback deployment.
+
+You can combine all the flags in a single operation to cleanup all the data
+that can be cleaned up.
+
+
+=== `rpm-ostree initramfs`
+
+The `rpm-ostree intitramfs` command is primarily used to enable the regeneration
+of the initramfs after its configuration has changed or a kernel driver has been added.
+
+You can query the state of initramfs regeneration by using the command without any
+options.
+
+You can enable/disable the regeneration by using the `--enable` or `--disable`
+options respectively.
+
+=== `rpm-ostree reload`
+
+The `rpm-ostree reload` command is used to reload the `rpm-ostreed` daemon that runs
+on a system.  This should be done when configuration of the daemon changes, for example
+when something a remote configuration in `/etc/ostree/remotes.d` has been modified.
+
+
+== Querying the RPM database
+
+The `rpm-ostree db` command allows the user to inspect RPM data of the ostree commit/deployment.
+
+=== `rpm-ostree db diff <commit> <commit>`
+
+The `rpm-ostree db diff` command allows the user to compare the differences of the package
+set between two commits.  By default, the output will show the packages which have been
+upgrade, downgraded, added, or removed between the commits.
+
+Example output on Fedora 26 Atomic Host:
+
+....
+# rpm-ostree db diff 080cf9c61a5e 13ed0f241c | head -n 10
+ostree diff commit old: 080cf9c61a5e (080cf9c61a5e38f8101290db5025a71fc6cfb189a9393785ba347d006d6285ee)
+ostree diff commit new: 13ed0f241c (13ed0f241c9945fd5253689ccd081b5478e5841a71909020e719437bbeb74424)
+Upgraded:
+  glibc 2.25-7.fc26.x86_64 -> 2.25-8.fc26.x86_64
+  glibc-all-langpacks 2.25-7.fc26.x86_64 -> 2.25-8.fc26.x86_64
+  glibc-common 2.25-7.fc26.x86_64 -> 2.25-8.fc26.x86_64
+  krb5-libs 1.15.1-21.fc26.x86_64 -> 1.15.1-22.fc26.x86_64
+  libcrypt-nss 2.25-7.fc26.x86_64 -> 2.25-8.fc26.x86_64
+  python2-setuptools 36.2.0-1.fc26.noarch -> 36.2.0-2.fc26.noarch
+  python3 3.6.2-1.fc26.x86_64 -> 3.6.2-5.fc26.x86_64
+....
+
+=== `rpm-ostree db list <commit>`
+
+The `rpm-ostree db list` command will list all the packages and their versions that are
+contained in a commit.
+
+Example output from Fedora 26 Atomic Host:
+
+....
+# rpm-ostree db list 080cf9c61a5e | head -n 10
+ostree commit: 080cf9c61a5e (080cf9c61a5e38f8101290db5025a71fc6cfb189a9393785ba347d006d6285ee)
+ GeoIP-1.6.11-1.fc26.x86_64
+ GeoIP-GeoLite-data-2017.07-1.fc26.noarch
+ NetworkManager-1:1.8.2-1.fc26.x86_64
+ NetworkManager-libnm-1:1.8.2-1.fc26.x86_64
+ NetworkManager-team-1:1.8.2-1.fc26.x86_64
+ acl-2.2.52-15.fc26.x86_64
+ atomic-1.18.1-5.fc26.x86_64
+ atomic-devmode-0.3.7-1.fc26.noarch
+ atomic-registries-1.18.1-5.fc26.x86_64
+....
+
+=== `rpm-ostree db version <commit>`
+
+The `rpm-ostree db version` command will display the version of the RPM database for the
+ostree commit provided.
+
+Example output from Fedora 26 Atomic Host:
+
+....
+# rpm-ostree db version 080cf9c61a5e
+ostree commit: 080cf9c61a5e (080cf9c61a5e38f8101290db5025a71fc6cfb189a9393785ba347d006d6285ee)
+  rpmdbv is:                       463:0a72e882be36a47eb580d89f0304a9876660f751
+....
+
+== Composing an ostree commit
+
+The `rpm-ostree` command has support for generating an ostree commit that can be used by
+existing Atomic Hosts.  The only input required is a JSON formatted 'treefile' which defines
+how the compose will be constructed.
+
+See the section on link:../using_ostree/creating_own_distribution/ostree_compose.html[ostree compose] for more details.
+
+=== `rpm-ostree compose tree <treefile>`
+
+The `rpm-ostree compose tree` command will install RPMs into a filesystem and commit that filesystem via ostree.
+
+== Experimental interface
+
+There is a generic `rpm-ostree ex` command that offers experimental features.  These features are not production read
+and should be treated as such.  These commands may or may not be promoted to supported, which means they may be dropped
+from the tool altogether in the future.
+
+=== `rpm-ostree ex livefs`
+
+The `rpm-ostree ex livefs` command will apply any pending changes (for example, a package layered via `rpm-ostree install`)
+to the currently booted deployment.  This allows the user to install packages and begin using them without having to reboot the
+system.
+
+=== `rpm-ostree ex override`
+
+The `rpm-ostree ex override` command allows the user to override the current package set of a deployment by removing or replacing
+packages from the base package set.  Using these overrides requires that ther user reboot the system, as `rpm-ostree ex livefs` only
+supports packages that have been added via `rpm-ostree install`.
+
+`rpm-ostree ex override remove` will remove a package from the base package set of a deployment.
+
+`rpm-ostree ex override replace` will replace a package in the base package set of a deployment.
+
+`rpm-ostree ex override reset` will reset any package overrides that have been made.
+
